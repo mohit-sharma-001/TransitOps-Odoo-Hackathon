@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { Menu, Search, Bell, Calendar } from "lucide-react";
 import ThemeToggle from "../common/ThemeToggle";
 
@@ -10,6 +11,7 @@ export default function Navbar({
 }) {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [searchFocused, setSearchFocused] = useState(false);
+  const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
 
   const formattedDate = new Date().toLocaleDateString("en-US", {
     weekday: "short",
@@ -117,14 +119,55 @@ export default function Navbar({
         </div>
 
         {/* Profile Avatar Block */}
-        <div className="flex items-center gap-2 pl-2 border-l border-slate-200/80 dark:border-slate-800/40">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 text-white flex items-center justify-center font-semibold text-xs shadow-md">
-            DJ
-          </div>
-          <div className="hidden lg:block text-left">
-            <p className="text-xs font-semibold text-slate-950 dark:text-slate-200 leading-none">Deepesh Joshi</p>
-            <p className="text-[10px] text-slate-500 leading-none mt-1">Fleet Manager</p>
-          </div>
+        <div className="relative">
+          <button
+            onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
+            className="flex items-center gap-2 pl-2 border-l border-slate-200/80 dark:border-slate-800/40 hover:opacity-80 transition-opacity cursor-pointer text-left"
+          >
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 text-white flex items-center justify-center font-semibold text-xs shadow-md">
+              DJ
+            </div>
+            <div className="hidden lg:block">
+              <p className="text-xs font-semibold text-slate-950 dark:text-slate-200 leading-none">Deepesh Joshi</p>
+              <p className="text-[10px] text-slate-500 leading-none mt-1">Fleet Manager</p>
+            </div>
+          </button>
+
+          {profileDropdownOpen && (
+            <>
+              {/* Backdrop */}
+              <div onClick={() => setProfileDropdownOpen(false)} className="fixed inset-0 z-45" />
+
+              <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl z-50 overflow-hidden py-1.5">
+                <Link
+                  to="/settings"
+                  onClick={() => setProfileDropdownOpen(false)}
+                  className="flex items-center gap-2 px-4 py-2 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors"
+                >
+                  <svg className="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 6V4m0 2a2 2 0 100 3m0-3a3 3 0 110 6m0-6V9m0 6v2m0-2a2 2 0 100 3m0-3a3 3 0 110 6m-3-9h.01M2 12h.01M22 12h.01M4 12a8 8 0 018-8V2m8 10a8 8 0 01-8 8v2m-8-10a8 8 0 008 8v-2m8-10a8 8 0 00-8-8V4" />
+                  </svg>
+                  <span>Settings</span>
+                </Link>
+                <button
+                  onClick={() => {
+                    setProfileDropdownOpen(false);
+                    localStorage.removeItem("isAuthenticated");
+                    toast.success("Successfully logged out", {
+                      style: { borderRadius: "12px", background: "#0d1527", color: "#fff" }
+                    });
+                    window.location.href = "/login";
+                  }}
+                  className="w-full flex items-center gap-2 px-4 py-2 text-xs font-semibold text-rose-600 dark:text-rose-450 hover:bg-rose-50 dark:hover:bg-rose-950/20 transition-colors text-left cursor-pointer"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                  </svg>
+                  <span>Sign Out</span>
+                </button>
+              </div>
+            </>
+          )}
         </div>
 
       </div>
