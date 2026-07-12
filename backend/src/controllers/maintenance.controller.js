@@ -29,7 +29,8 @@ const createMaintenanceLog = async (req, res) => {
           vehicleId: parseInt(vehicleId),
           description,
           cost: parseFloat(cost),
-          startedAt: startedAt ? new Date(startedAt) : new Date()
+          startedAt: startedAt ? new Date(startedAt) : new Date(),
+          previousStatus: vehicle.status
         }
       });
 
@@ -72,9 +73,8 @@ const completeMaintenance = async (req, res) => {
       return res.status(400).json({ error: 'Maintenance is already completed' });
     }
 
-    const currentVehicleStatus = log.vehicle.status;
-    // Determine target vehicle status: if currently 'Retired', keep it 'Retired'. Otherwise, revert to 'Available'.
-    const targetStatus = currentVehicleStatus === 'Retired' ? 'Retired' : 'Available';
+    // Determine target vehicle status: if previousStatus was 'Retired', keep it 'Retired'. Otherwise, revert to 'Available'.
+    const targetStatus = log.previousStatus === 'Retired' ? 'Retired' : 'Available';
 
     // 2. Perform updates inside transaction
     const updatedLog = await prisma.$transaction(async (tx) => {

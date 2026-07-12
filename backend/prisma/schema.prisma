@@ -61,13 +61,14 @@ model Trip {
 }
 
 model MaintenanceLog {
-  id          Int       @id @default(autoincrement())
-  vehicleId   Int
-  vehicle     Vehicle   @relation(fields: [vehicleId], references: [id])
-  description String
-  cost        Float
-  startedAt   DateTime
-  completedAt DateTime?
+  id             Int       @id @default(autoincrement())
+  vehicleId      Int
+  vehicle        Vehicle   @relation(fields: [vehicleId], references: [id])
+  description    String
+  cost           Float
+  startedAt      DateTime
+  completedAt    DateTime?
+  previousStatus String?
 }
 
 model FuelLog {
