@@ -254,9 +254,25 @@ const cancelTrip = async (req, res) => {
   }
 };
 
+const listTrips = async (req, res) => {
+  try {
+    const trips = await prisma.trip.findMany({
+      include: {
+        vehicle: true,
+        driver: true
+      }
+    });
+    return res.status(200).json(trips);
+  } catch (error) {
+    console.error('List trips error:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
 module.exports = {
   createTrip,
   dispatchTrip,
   completeTrip,
-  cancelTrip
+  cancelTrip,
+  listTrips
 };

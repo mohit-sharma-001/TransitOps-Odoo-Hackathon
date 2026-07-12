@@ -49,4 +49,7 @@ router.post(
   tripController.cancelTrip
 );
 
+// GET /api/trips (All authorized users)
+router.get('/', requireAuth, tripController.listTrips);
+
 module.exports = router;
