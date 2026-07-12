@@ -1,0 +1,89 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           Int    @id @default(autoincrement())
+  name         String
+  email        String @unique
+  passwordHash String
+  role         String // Allowed values: FleetManager, Dispatcher, SafetyOfficer, FinancialAnalyst
+}
+
+model Vehicle {
+  id                 Int              @id @default(autoincrement())
+  registrationNumber String           @unique
+  name               String
+  type               String
+  capacity           Float
+  odometer           Float
+  acquisitionCost    Float
+  status             String           // Allowed values: Available, OnTrip, InShop, Retired
+  trips              Trip[]
+  maintenanceLogs    MaintenanceLog[]
+  fuelLogs           FuelLog[]
+  expenses           Expense[]
+}
+
+model Driver {
+  id              Int      @id @default(autoincrement())
+  name            String
+  licenseNumber   String
+  licenseCategory String
+  licenseExpiry   DateTime
+  phone           String
+  safetyScore     Float
+  status          String   // Allowed values: Available, OnTrip, OffDuty, Suspended
+  trips           Trip[]
+}
+
+model Trip {
+  id            Int        @id @default(autoincrement())
+  source        String
+  destination   String
+  vehicleId     Int
+  vehicle       Vehicle    @relation(fields: [vehicleId], references: [id])
+  driverId      Int
+  driver        Driver     @relation(fields: [driverId], references: [id])
+  cargoWeight   Float
+  distance      Float
+  status        String     // Allowed values: Draft, Dispatched, Completed, Cancelled
+  finalOdometer Float?
+  fuelConsumed  Float?
+}
+
+model MaintenanceLog {
+  id          Int       @id @default(autoincrement())
+  vehicleId   Int
+  vehicle     Vehicle   @relation(fields: [vehicleId], references: [id])
+  description String
+  cost        Float
+  startedAt   DateTime
+  completedAt DateTime?
+}
+
+model FuelLog {
+  id        Int      @id @default(autoincrement())
+  vehicleId Int
+  vehicle   Vehicle  @relation(fields: [vehicleId], references: [id])
+  liters    Float
+  cost      Float
+  date      DateTime
+}
+
+model Expense {
+  id        Int      @id @default(autoincrement())
+  vehicleId Int
+  vehicle   Vehicle  @relation(fields: [vehicleId], references: [id])
+  type      String   // Allowed values: toll, other
+  cost      Float
+  date      DateTime
+}
