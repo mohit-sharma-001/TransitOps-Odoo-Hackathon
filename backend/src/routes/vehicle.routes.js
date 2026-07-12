@@ -38,4 +38,12 @@ router.put(
   vehicleController.updateVehicleStatus
 );
 
+// GET /api/vehicles/:id/costs (Fleet Manager & Financial Analyst only)
+router.get(
+  '/:id/costs',
+  requireAuth,
+  requireRole(['FleetManager', 'FinancialAnalyst']),
+  vehicleController.getVehicleCosts
+);
+
 module.exports = router;

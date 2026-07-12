@@ -115,9 +115,51 @@ const updateVehicleStatus = async (req, res) => {
   }
 };
 
+const getVehicleCosts = async (req, res) => {
+  const vehicleId = parseInt(req.params.id);
+  if (isNaN(vehicleId)) {
+    return res.status(400).json({ error: 'Invalid vehicle ID' });
+  }
+
+  try {
+    const vehicle = await prisma.vehicle.findUnique({
+      where: { id: vehicleId },
+      include: {
+        maintenanceLogs: true,
+        fuelLogs: true,
+        expenses: true
+      }
+    });
+
+    if (!vehicle) {
+      return res.status(404).json({ error: 'Vehicle not found' });
+    }
+
+    const acquisitionCost = vehicle.acquisitionCost;
+    const maintenanceCost = vehicle.maintenanceLogs.reduce((sum, log) => sum + log.cost, 0);
+    const fuelCost = vehicle.fuelLogs.reduce((sum, log) => sum + log.cost, 0);
+    const expenseCost = vehicle.expenses.reduce((sum, exp) => sum + exp.cost, 0);
+    const totalCost = acquisitionCost + maintenanceCost + fuelCost + expenseCost;
+
+    return res.status(200).json({
+      vehicleId: vehicle.id,
+      registrationNumber: vehicle.registrationNumber,
+      acquisitionCost,
+      maintenanceCost,
+      fuelCost,
+      expenseCost,
+      totalCost
+    });
+  } catch (error) {
+    console.error('Get vehicle costs error:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
 module.exports = {
   createVehicle,
   listVehicles,
   listAvailableVehicles,
-  updateVehicleStatus
+  updateVehicleStatus,
+  getVehicleCosts
 };
