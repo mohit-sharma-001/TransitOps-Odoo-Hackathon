@@ -1,16 +1,33 @@
+import { useEffect, useState } from "react";
 import { MapPin, Navigation } from "lucide-react";
+import tripService from "../../services/tripService";
 
-export default function RecentTripsTable({ isLoading = false }) {
-  const recentTrips = [
-    { id: 1, vehicle: "Volvo FH16 (TRK-102)", driver: "Alex Rivera", route: "Chicago, IL ➔ New York, NY", cargo: "Electronics (4.5t)", status: "Running", progress: 68, eta: "5:30 PM" },
-    { id: 2, vehicle: "Scania R500 (TRK-105)", driver: "Sarah Jenkins", route: "Houston, TX ➔ Los Angeles, CA", cargo: "Pharma Supplies (1.8t)", status: "Completed", progress: 100, eta: "Done" },
-    { id: 3, vehicle: "Actros L (TRK-109)", driver: "Marcus Brody", route: "Seattle, WA ➔ Denver, CO", cargo: "Industrial Steel (8.2t)", status: "Pending", progress: 0, eta: "July 13, 9:00 AM" },
-    { id: 4, vehicle: "Cascadia (TRK-101)", driver: "David Miller", route: "Miami, FL ➔ Atlanta, GA", cargo: "Fresh Produce (5.0t)", status: "Running", progress: 24, eta: "July 13, 8:15 AM" },
-    { id: 5, vehicle: "DAF XF (TRK-108)", driver: "Elena Rostova", route: "Boston, MA ➔ Philadelphia, PA", cargo: "Auto Parts (3.2t)", status: "Cancelled", progress: 0, eta: "Cancelled" },
-  ];
+export default function RecentTripsTable() {
+  const [trips, setTrips] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchTrips = async () => {
+      try {
+        const data = await tripService.getTrips();
+        // Show top 5 recent trips
+        setTrips(data.slice(-5).reverse());
+      } catch (error) {
+        console.error("Failed to load recent trips:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchTrips();
+  }, []);
 
   const getStatusBadge = (status) => {
-    switch (status) {
+    // Map Dispatched to Running and Draft to Pending
+    let displayStatus = status;
+    if (status === "Dispatched") displayStatus = "Running";
+    if (status === "Draft") displayStatus = "Pending";
+
+    switch (displayStatus) {
       case "Completed":
         return (
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-400 border border-emerald-200/50 dark:border-emerald-800/30">
@@ -40,7 +57,11 @@ export default function RecentTripsTable({ isLoading = false }) {
           </span>
         );
       default:
-        return null;
+        return (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-50 text-slate-700 dark:bg-slate-950/20 dark:text-slate-400 border border-slate-200/50 dark:border-slate-800/30">
+            {status}
+          </span>
+        );
     }
   };
 
@@ -85,60 +106,76 @@ export default function RecentTripsTable({ isLoading = false }) {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-850/50 text-sm">
-              {recentTrips.map((trip) => (
-                <tr key={trip.id} className="hover:bg-slate-50/40 dark:hover:bg-slate-900/20 transition-colors duration-150">
-                  {/* Vehicle */}
-                  <td className="py-3.5 pr-4 font-semibold text-slate-850 dark:text-slate-200 whitespace-nowrap">
-                    {trip.vehicle}
-                  </td>
-                  
-                  {/* Driver */}
-                  <td className="py-3.5 px-4 whitespace-nowrap text-slate-600 dark:text-slate-400">
-                    <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 rounded-full bg-slate-100 dark:bg-slate-800 text-[10px] font-bold text-slate-650 dark:text-slate-350 flex items-center justify-center">
-                        {trip.driver.split(" ").map(w => w[0]).join("")}
+              {trips.map((trip) => {
+                // Calculate progress
+                let progress = 0;
+                let eta = "Pending dispatch";
+                if (trip.status === "Completed") {
+                  progress = 100;
+                  eta = "Done";
+                } else if (trip.status === "Dispatched") {
+                  progress = 50;
+                  eta = "In transit";
+                } else if (trip.status === "Cancelled") {
+                  progress = 0;
+                  eta = "Cancelled";
+                }
+
+                return (
+                  <tr key={trip.id} className="hover:bg-slate-50/40 dark:hover:bg-slate-900/20 transition-colors duration-150">
+                    {/* Vehicle */}
+                    <td className="py-3.5 pr-4 font-semibold text-slate-850 dark:text-slate-200 whitespace-nowrap">
+                      {trip.vehicle ? `${trip.vehicle.name} (${trip.vehicle.registrationNumber})` : "N/A"}
+                    </td>
+                    
+                    {/* Driver */}
+                    <td className="py-3.5 px-4 whitespace-nowrap text-slate-600 dark:text-slate-400">
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 rounded-full bg-slate-100 dark:bg-slate-800 text-[10px] font-bold text-slate-650 dark:text-slate-350 flex items-center justify-center">
+                          {trip.driver ? trip.driver.name.split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2) : "U"}
+                        </div>
+                        <span>{trip.driver ? trip.driver.name : "N/A"}</span>
                       </div>
-                      <span>{trip.driver}</span>
-                    </div>
-                  </td>
+                    </td>
 
-                  {/* Route */}
-                  <td className="py-3.5 px-4 text-xs font-medium text-slate-600 dark:text-slate-400 whitespace-nowrap">
-                    <div className="flex items-center gap-1">
-                      <MapPin className="h-3.5 w-3.5 text-blue-500 flex-shrink-0" />
-                      <span>{trip.route}</span>
-                    </div>
-                  </td>
-
-                  {/* Cargo */}
-                  <td className="py-3.5 px-4 text-xs text-slate-600 dark:text-slate-400 whitespace-nowrap">
-                    {trip.cargo}
-                  </td>
-
-                  {/* Status Badge */}
-                  <td className="py-3.5 px-4 whitespace-nowrap">
-                    {getStatusBadge(trip.status)}
-                  </td>
-
-                  {/* Progress Indicator */}
-                  <td className="py-3.5 px-4 whitespace-nowrap">
-                    <div className="flex items-center gap-2 w-28">
-                      <div className="h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full flex-1 overflow-hidden">
-                        <div 
-                          className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full transition-all duration-500" 
-                          style={{ width: `${trip.progress}%` }}
-                        />
+                    {/* Route */}
+                    <td className="py-3.5 px-4 text-xs font-medium text-slate-600 dark:text-slate-400 whitespace-nowrap">
+                      <div className="flex items-center gap-1">
+                        <MapPin className="h-3.5 w-3.5 text-blue-500 flex-shrink-0" />
+                        <span>{trip.source} ➔ {trip.destination}</span>
                       </div>
-                      <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400">{trip.progress}%</span>
-                    </div>
-                  </td>
+                    </td>
 
-                  {/* ETA */}
-                  <td className="py-3.5 pl-4 text-xs font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap">
-                    {trip.eta}
-                  </td>
-                </tr>
-              ))}
+                    {/* Cargo */}
+                    <td className="py-3.5 px-4 text-xs text-slate-600 dark:text-slate-400 whitespace-nowrap">
+                      {trip.cargoWeight} kg
+                    </td>
+
+                    {/* Status Badge */}
+                    <td className="py-3.5 px-4 whitespace-nowrap">
+                      {getStatusBadge(trip.status)}
+                    </td>
+
+                    {/* Progress Indicator */}
+                    <td className="py-3.5 px-4 whitespace-nowrap">
+                      <div className="flex items-center gap-2 w-28">
+                        <div className="h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full flex-1 overflow-hidden">
+                          <div 
+                            className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full transition-all duration-500" 
+                            style={{ width: `${progress}%` }}
+                          />
+                        </div>
+                        <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400">{progress}%</span>
+                      </div>
+                    </td>
+
+                    {/* ETA */}
+                    <td className="py-3.5 pl-4 text-xs font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap">
+                      {eta}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

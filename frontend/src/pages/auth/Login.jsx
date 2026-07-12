@@ -3,45 +3,56 @@ import { useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Lock, Mail, Eye, EyeOff, Check, AlertCircle, ArrowRight } from "lucide-react";
 import toast from "react-hot-toast";
+import { useAuth } from "../../context/AuthContext";
 
 export default function Login() {
-  const [email, setEmail] = useState("admin@transitops.com");
+  const [email, setEmail] = useState("john@transitops.com");
   const [password, setPassword] = useState("password123");
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
   const navigate = useNavigate();
+  const { login } = useAuth();
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
+    setErrorMessage("");
     if (!email.trim() || !password.trim()) {
-      toast.error("Please fill in all fields", {
-        style: { borderRadius: "12px", background: "#0d1527", color: "#fff" }
-      });
+      setErrorMessage("Please fill in all fields");
       return;
     }
 
     setIsLoading(true);
-    // Simulate API call
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      await login(email, password);
+      // Legacy compatibility for any other checks
       localStorage.setItem("isAuthenticated", "true");
       toast.success("Welcome back to TransitOps!", {
         style: { borderRadius: "12px", background: "#0d1527", color: "#fff" }
       });
       navigate("/dashboard");
-    }, 1200);
+    } catch (error) {
+      console.error('Login failed:', error);
+      const errMsg = error.response?.data?.error || "Invalid email or password";
+      setErrorMessage(errMsg);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const fillMockCredentials = (role) => {
-    if (role === "admin") {
-      setEmail("admin@transitops.com");
-      setPassword("admin123");
-    } else if (role === "manager") {
-      setEmail("manager@transitops.com");
-      setPassword("manager123");
+    if (role === "manager") {
+      setEmail("john@transitops.com");
+      setPassword("password123");
+    } else if (role === "dispatcher") {
+      setEmail("dave@transitops.com");
+      setPassword("password123");
+    } else if (role === "analyst") {
+      setEmail("alice@transitops.com");
+      setPassword("password123");
     }
-    toast.success(`Loaded mock credentials for ${role}`, {
+    toast.success(`Loaded credentials for ${role}`, {
       style: { borderRadius: "8px", background: "#0f172a", color: "#e2e8f0" }
     });
   };
@@ -54,10 +65,10 @@ export default function Login() {
 
       {/* Main Container */}
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, ease: "easeOut" }}
-        className="w-full max-w-md bg-white/5 dark:bg-slate-900/40 backdrop-blur-xl border border-slate-200/10 dark:border-slate-800/40 p-8 rounded-3xl shadow-2xl relative z-10 space-y-6"
+         initial={{ opacity: 0, y: 20 }}
+         animate={{ opacity: 1, y: 0 }}
+         transition={{ duration: 0.5, ease: "easeOut" }}
+         className="w-full max-w-md bg-white/5 dark:bg-slate-900/40 backdrop-blur-xl border border-slate-200/10 dark:border-slate-800/40 p-8 rounded-3xl shadow-2xl relative z-10 space-y-6"
       >
         {/* Brand Header */}
         <div className="text-center">
@@ -82,6 +93,12 @@ export default function Login() {
 
         {/* Form */}
         <form onSubmit={handleLogin} className="space-y-4">
+          {errorMessage && (
+            <div className="flex items-center gap-2 p-3 text-xs text-rose-500 bg-rose-500/10 border border-rose-500/20 rounded-xl">
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              <span>{errorMessage}</span>
+            </div>
+          )}
           {/* Email Input */}
           <div className="flex flex-col gap-1.5">
             <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
@@ -171,18 +188,29 @@ export default function Login() {
           <p className="text-[10px] font-bold text-slate-500 uppercase text-center">
             Quick Sandbox Access
           </p>
-          <div className="flex gap-2">
+          <div className="flex flex-col gap-2">
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => fillMockCredentials("manager")}
+                className="flex-1 py-1.5 rounded-lg border border-slate-200/5 bg-slate-900/60 hover:bg-slate-800/40 text-[11px] font-medium text-slate-300 hover:text-white transition-all cursor-pointer"
+              >
+                Fleet Manager
+              </button>
+              <button
+                type="button"
+                onClick={() => fillMockCredentials("dispatcher")}
+                className="flex-1 py-1.5 rounded-lg border border-slate-200/5 bg-slate-900/60 hover:bg-slate-800/40 text-[11px] font-medium text-slate-300 hover:text-white transition-all cursor-pointer"
+              >
+                Dispatcher
+              </button>
+            </div>
             <button
-              onClick={() => fillMockCredentials("admin")}
-              className="flex-1 py-1.5 rounded-lg border border-slate-200/5 bg-slate-900/60 hover:bg-slate-800/40 text-[11px] font-medium text-slate-300 hover:text-white transition-all cursor-pointer"
+              type="button"
+              onClick={() => fillMockCredentials("analyst")}
+              className="w-full py-1.5 rounded-lg border border-slate-200/5 bg-slate-900/60 hover:bg-slate-800/40 text-[11px] font-medium text-slate-300 hover:text-white transition-all cursor-pointer"
             >
-              Fleet Admin
-            </button>
-            <button
-              onClick={() => fillMockCredentials("manager")}
-              className="flex-1 py-1.5 rounded-lg border border-slate-200/5 bg-slate-900/60 hover:bg-slate-800/40 text-[11px] font-medium text-slate-300 hover:text-white transition-all cursor-pointer"
-            >
-              Operations Mgr
+              Financial Analyst
             </button>
           </div>
         </div>

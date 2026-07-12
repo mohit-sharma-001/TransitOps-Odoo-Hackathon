@@ -143,23 +143,23 @@ export default function DriverProfile({ driver, onBack }) {
             </div>
             <p className="text-sm text-white/70 font-medium">{driver.driverId} • CDL Class A Licensed</p>
 
-            <div className="flex flex-wrap gap-4 mt-3">
-              <div className="flex items-center gap-1.5">
-                <Star className="h-4 w-4 text-amber-300 fill-amber-300" />
-                <span className="text-sm font-bold">{driver.rating.toFixed(1)}</span>
-                <span className="text-xs text-white/60">rating</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <Clock className="h-4 w-4 text-white/60" />
-                <span className="text-sm font-bold">{driver.experience} yrs</span>
-                <span className="text-xs text-white/60">experience</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <Navigation className="h-4 w-4 text-white/60" />
-                <span className="text-sm font-bold">{driver.totalTrips || 287}</span>
-                <span className="text-xs text-white/60">total trips</span>
-              </div>
-            </div>
+             <div className="flex flex-wrap gap-4 mt-3">
+               <div className="flex items-center gap-1.5">
+                 <Star className="h-4 w-4 text-amber-300 fill-amber-300" />
+                 <span className="text-sm font-bold">{(driver.rating ?? 4.5).toFixed(1)}</span>
+                 <span className="text-xs text-white/60">rating</span>
+               </div>
+               <div className="flex items-center gap-1.5">
+                 <Clock className="h-4 w-4 text-white/60" />
+                 <span className="text-sm font-bold">{driver.experience ?? 5} yrs</span>
+                 <span className="text-xs text-white/60">experience</span>
+               </div>
+               <div className="flex items-center gap-1.5">
+                 <Navigation className="h-4 w-4 text-white/60" />
+                 <span className="text-sm font-bold">{driver.totalTrips || 287}</span>
+                 <span className="text-xs text-white/60">total trips</span>
+               </div>
+             </div>
           </div>
         </div>
       </div>
@@ -236,8 +236,8 @@ export default function DriverProfile({ driver, onBack }) {
               </div>
               <div className="p-3 bg-slate-50/50 dark:bg-slate-900/20 rounded-xl border border-slate-100 dark:border-slate-800/50 text-center">
                 <p className="text-[10px] text-slate-400 font-bold uppercase">Expiry Date</p>
-                <p className={`text-sm font-bold mt-1 ${new Date(driver.licenseExpiry) < new Date() ? "text-rose-600 dark:text-rose-400" : "text-slate-800 dark:text-slate-200"}`}>
-                  {driver.licenseExpiry}
+                <p className={`text-sm font-bold mt-1 ${driver.licenseValid === false ? "text-rose-500" : "text-slate-800 dark:text-slate-200"}`}>
+                  {new Date(driver.licenseExpiry).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                 </p>
               </div>
             </div>

@@ -13,7 +13,8 @@ import {
   ChevronRight,
   SlidersHorizontal,
   Calendar,
-  Wrench
+  Wrench,
+  CheckCircle2
 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -23,7 +24,8 @@ export default function MaintenanceTable({
   onEditRecord,
   onDeleteRecord,
   onScheduleClick,
-  onExportCSV
+  onExportCSV,
+  onCompleteLog
 }) {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All Statuses");
@@ -271,9 +273,12 @@ export default function MaintenanceTable({
                       {rec.status}
                     </span>
                   </td>
-                  <td className="px-3 py-3 text-right">
+                  <td className="px-3 py-3 text-right font-semibold">
                     <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button onClick={() => onViewDetails(rec)} className="p-1.5 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-950/30 text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer" title="View Details"><Eye className="h-3.5 w-3.5" /></button>
+                      {!rec.completionDate && (
+                        <button onClick={() => onCompleteLog(rec.id)} className="p-1.5 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-950/30 text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-455 transition-colors cursor-pointer" title="Mark Completed"><CheckCircle2 className="h-3.5 w-3.5" /></button>
+                      )}
                       <button onClick={() => onEditRecord(rec)} className="p-1.5 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-950/30 text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 transition-colors cursor-pointer" title="Edit"><Edit2 className="h-3.5 w-3.5" /></button>
                       <button onClick={() => onDeleteRecord(rec.id)} className="p-1.5 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/30 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 transition-colors cursor-pointer" title="Delete"><Trash2 className="h-3.5 w-3.5" /></button>
                     </div>

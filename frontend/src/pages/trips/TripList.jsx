@@ -1,170 +1,136 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AnimatePresence } from "framer-motion";
 import TripTable from "../../components/trip/TripTable";
 import TripDetails from "../../components/trip/TripDetails";
 import TripForm from "../../components/trip/TripForm";
 import toast from "react-hot-toast";
-
-const initialTrips = [
-  {
-    id: 1,
-    tripId: "TRP-9501",
-    driver: "Alex Rivera",
-    vehicle: "Volvo FH16 (TRK-102)",
-    source: "Chicago, IL",
-    destination: "New York, NY",
-    cargoType: "Electronics",
-    priority: "High",
-    distance: 790,
-    startTime: "2026-07-10T08:00",
-    eta: "July 11, 5:30 PM",
-    estimatedArrival: "July 11, 5:30 PM",
-    notes: "Handle with care. Temperature-controlled container required.",
-    status: "In Progress"
-  },
-  {
-    id: 2,
-    tripId: "TRP-9482",
-    driver: "Sarah Jenkins",
-    vehicle: "Scania R500 (TRK-105)",
-    source: "Houston, TX",
-    destination: "Los Angeles, CA",
-    cargoType: "Pharmaceuticals",
-    priority: "Critical",
-    distance: 1547,
-    startTime: "2026-07-08T06:30",
-    eta: "July 10, 2:00 PM",
-    estimatedArrival: "July 10, 2:00 PM",
-    notes: "Refrigerated trailer. Maintain 2–8°C. Proof of delivery mandatory.",
-    status: "Completed"
-  },
-  {
-    id: 3,
-    tripId: "TRP-9510",
-    driver: "Marcus Brody",
-    vehicle: "Actros L (TRK-109)",
-    source: "Seattle, WA",
-    destination: "Denver, CO",
-    cargoType: "Industrial Steel",
-    priority: "Medium",
-    distance: 1320,
-    startTime: "2026-07-13T09:00",
-    eta: "July 15, 8:00 AM",
-    estimatedArrival: "July 15, 8:00 AM",
-    notes: "Heavy load — require oversize permit for I-90 corridor.",
-    status: "Scheduled"
-  },
-  {
-    id: 4,
-    tripId: "TRP-9498",
-    driver: "David Miller",
-    vehicle: "Cascadia (TRK-101)",
-    source: "Miami, FL",
-    destination: "Atlanta, GA",
-    cargoType: "Perishable Goods",
-    priority: "High",
-    distance: 662,
-    startTime: "2026-07-09T07:15",
-    eta: "July 10, 6:00 AM",
-    estimatedArrival: "July 10, 6:00 AM",
-    notes: "Fresh produce — must arrive within 24 hours. Call receiver 30 mins prior.",
-    status: "Delayed"
-  },
-  {
-    id: 5,
-    tripId: "TRP-9475",
-    driver: "Elena Rostova",
-    vehicle: "DAF XF (TRK-108)",
-    source: "Boston, MA",
-    destination: "Philadelphia, PA",
-    cargoType: "Auto Parts",
-    priority: "Low",
-    distance: 310,
-    startTime: "2026-07-07T14:00",
-    eta: "July 7, 10:30 PM",
-    estimatedArrival: "July 7, 10:30 PM",
-    notes: "Standard delivery. Dock #3 at receiver warehouse.",
-    status: "Completed"
-  },
-  {
-    id: 6,
-    tripId: "TRP-9520",
-    driver: "James Chen",
-    vehicle: "Tesla Semi (EV-401)",
-    source: "San Francisco, CA",
-    destination: "Portland, OR",
-    cargoType: "Electronics",
-    priority: "Medium",
-    distance: 636,
-    startTime: "2026-07-12T10:00",
-    eta: "July 13, 3:00 PM",
-    estimatedArrival: "July 13, 3:00 PM",
-    notes: "EV route — verify charging station availability at Grants Pass, OR.",
-    status: "In Progress"
-  },
-  {
-    id: 7,
-    tripId: "TRP-9465",
-    driver: "Priya Sharma",
-    vehicle: "Ford Transit (VAN-201)",
-    source: "Dallas, TX",
-    destination: "San Antonio, TX",
-    cargoType: "General Freight",
-    priority: "Low",
-    distance: 274,
-    startTime: "2026-07-06T11:30",
-    eta: "Cancelled",
-    estimatedArrival: "Cancelled",
-    notes: "Customer cancelled order. Vehicle returned to depot.",
-    status: "Cancelled"
-  },
-  {
-    id: 8,
-    tripId: "TRP-9530",
-    driver: "Alex Rivera",
-    vehicle: "Hino 268 (TRK-302)",
-    source: "Phoenix, AZ",
-    destination: "Las Vegas, NV",
-    cargoType: "Temperature Controlled",
-    priority: "Critical",
-    distance: 297,
-    startTime: "2026-07-14T05:00",
-    eta: "July 14, 12:00 PM",
-    estimatedArrival: "July 14, 12:00 PM",
-    notes: "Medical supplies — critical priority. Escort paperwork attached.",
-    status: "Scheduled"
-  }
-];
+import tripService from "../../services/tripService";
+import { useAuth } from "../../context/AuthContext";
 
 export default function TripList() {
-  const [trips, setTrips] = useState(initialTrips);
+  const { user } = useAuth();
+  const canManage = user?.role === "FleetManager" || user?.role === "Dispatcher";
+
+  const [trips, setTrips] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [view, setView] = useState("list");
   const [selectedTrip, setSelectedTrip] = useState(null);
 
-  const handleSaveTrip = (savedData) => {
-    if (selectedTrip) {
-      setTrips((prev) =>
-        prev.map((t) => (t.id === selectedTrip.id ? { ...t, ...savedData } : t))
-      );
-      toast.success("Trip dispatch updated successfully", {
-        style: { borderRadius: '12px', background: '#0d1527', color: '#fff' }
-      });
-    } else {
-      setTrips((prev) => [savedData, ...prev]);
-      toast.success("New trip dispatched to fleet", {
-        style: { borderRadius: '12px', background: '#0d1527', color: '#fff' }
-      });
+  // States for Completing Trip Modal
+  const [completingTrip, setCompletingTrip] = useState(null);
+  const [finalOdometer, setFinalOdometer] = useState("");
+  const [fuelConsumed, setFuelConsumed] = useState("");
+  const [submittingComplete, setSubmittingComplete] = useState(false);
+
+  const fetchTrips = async () => {
+    setIsLoading(true);
+    try {
+      const data = await tripService.getTrips();
+      // Map API payload into UI-friendly structure
+      const mapped = data.map((t) => ({
+        ...t,
+        tripId: `TRP-${t.id + 9500}`,
+        driver: t.driver ? t.driver.name : "Unassigned",
+        vehicle: t.vehicle ? `${t.vehicle.name} (${t.vehicle.registrationNumber})` : "Unassigned",
+        eta: t.status === "Cancelled" ? "Cancelled" : t.status === "Completed" ? "Completed" : new Date(t.estimatedArrival || new Date()).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }),
+        estimatedArrival: t.estimatedArrival || new Date().toISOString()
+      }));
+      setTrips(mapped);
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to load active trip schedule");
+    } finally {
+      setIsLoading(false);
     }
-    setView("list");
-    setSelectedTrip(null);
   };
 
-  const handleDeleteTrip = (id) => {
-    if (window.confirm("Are you sure you want to cancel and remove this trip from the dispatch log?")) {
-      setTrips((prev) => prev.filter((t) => t.id !== id));
-      toast.success("Trip removed from dispatch log", {
+  useEffect(() => {
+    fetchTrips();
+  }, []);
+
+  const handleSaveTrip = async (savedData) => {
+    try {
+      const payload = {
+        source: savedData.source,
+        destination: savedData.destination,
+        vehicleId: parseInt(savedData.vehicleId),
+        driverId: parseInt(savedData.driverId),
+        cargoWeight: parseFloat(savedData.cargoWeight || 5000),
+        distance: parseFloat(savedData.distance || 300)
+      };
+
+      await tripService.createTrip(payload);
+      toast.success("New trip created successfully in Draft", {
         style: { borderRadius: '12px', background: '#0d1527', color: '#fff' }
       });
+      fetchTrips();
+      setView("list");
+      setSelectedTrip(null);
+    } catch (error) {
+      console.error(error);
+      const errMsg = error.response?.data?.error || "Failed to create trip";
+      toast.error(errMsg);
+    }
+  };
+
+  const handleDispatchTrip = async (id) => {
+    try {
+      await tripService.dispatchTrip(id);
+      toast.success("Trip successfully dispatched!", {
+        style: { borderRadius: '12px', background: '#0d1527', color: '#fff' }
+      });
+      fetchTrips();
+    } catch (error) {
+      console.error(error);
+      const errMsg = error.response?.data?.error || "Failed to dispatch trip";
+      toast.error(errMsg, { duration: 5000 });
+    }
+  };
+
+  const handleCancelTrip = async (id) => {
+    if (window.confirm("Are you sure you want to cancel this trip dispatch?")) {
+      try {
+        await tripService.cancelTrip(id);
+        toast.success("Trip marked as Cancelled", {
+          style: { borderRadius: '12px', background: '#0d1527', color: '#fff' }
+        });
+        fetchTrips();
+      } catch (error) {
+        console.error(error);
+        const errMsg = error.response?.data?.error || "Failed to cancel trip";
+        toast.error(errMsg);
+      }
+    }
+  };
+
+  const handleCompleteTripClick = (trip) => {
+    setCompletingTrip(trip);
+    setFinalOdometer("");
+    setFuelConsumed("");
+  };
+
+  const handleCompleteTripSubmit = async () => {
+    if (!finalOdometer || !fuelConsumed) {
+      toast.error("Please enter final odometer and fuel consumed");
+      return;
+    }
+    setSubmittingComplete(true);
+    try {
+      await tripService.completeTrip(completingTrip.id, {
+        finalOdometer: parseFloat(finalOdometer),
+        fuelConsumed: parseFloat(fuelConsumed)
+      });
+      toast.success("Trip completed and logged!", {
+        style: { borderRadius: '12px', background: '#0d1527', color: '#fff' }
+      });
+      setCompletingTrip(null);
+      fetchTrips();
+    } catch (error) {
+      console.error(error);
+      const errMsg = error.response?.data?.error || "Failed to complete trip";
+      toast.error(errMsg);
+    } finally {
+      setSubmittingComplete(false);
     }
   };
 
@@ -173,23 +139,14 @@ export default function TripList() {
     setView("details");
   };
 
-  const handleEditTrip = (trip) => {
-    setSelectedTrip(trip);
-    setView("edit");
-  };
-
-  const handleCreateTripClick = () => {
-    setSelectedTrip(null);
-    setView("add");
-  };
-
   const handleCancel = () => {
     setView("list");
     setSelectedTrip(null);
+    fetchTrips();
   };
 
   const handleExportCSV = () => {
-    const headers = ["Trip ID", "Driver", "Vehicle", "Source", "Destination", "Distance (mi)", "Start Time", "ETA", "Status", "Priority", "Cargo Type"];
+    const headers = ["Trip ID", "Driver", "Vehicle", "Source", "Destination", "Distance (mi)", "Start Time", "ETA", "Status", "Priority"];
     const rows = trips.map((t) => [
       t.tripId,
       t.driver,
@@ -200,8 +157,7 @@ export default function TripList() {
       t.startTime,
       t.eta,
       t.status,
-      t.priority,
-      t.cargoType || "General"
+      t.priority || "Medium"
     ]);
 
     const csvContent = "data:text/csv;charset=utf-8,"
@@ -235,11 +191,14 @@ export default function TripList() {
 
             <TripTable
               trips={trips}
+              isLoading={isLoading}
               onViewDetails={handleViewDetails}
-              onEditTrip={handleEditTrip}
-              onDeleteTrip={handleDeleteTrip}
+              onDispatchTrip={handleDispatchTrip}
+              onCompleteTrip={handleCompleteTripClick}
+              onCancelTrip={handleCancelTrip}
               onCreateTripClick={handleCreateTripClick}
               onExportCSV={handleExportCSV}
+              canManage={canManage}
             />
           </div>
         )}
@@ -253,16 +212,71 @@ export default function TripList() {
           </div>
         )}
 
-        {(view === "add" || view === "edit") && (
+        {view === "add" && (
           <div key="form">
             <TripForm
-              trip={selectedTrip}
+              trip={null}
               onSave={handleSaveTrip}
               onCancel={handleCancel}
             />
           </div>
         )}
       </AnimatePresence>
+
+      {/* Complete Trip Modal Overlay */}
+      {completingTrip && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-sm p-4">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 rounded-2xl max-w-sm w-full shadow-lg space-y-4">
+            <div>
+              <h3 className="text-base font-bold text-slate-900 dark:text-white">Complete Trip {completingTrip.tripId}</h3>
+              <p className="text-xs text-slate-500 mt-1">Submit final telemetry parameters to archive dispatch log.</p>
+            </div>
+            <form onSubmit={(e) => { e.preventDefault(); handleCompleteTripSubmit(); }} className="space-y-4">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Final Odometer (mi)</label>
+                <input
+                  type="number"
+                  step="any"
+                  required
+                  value={finalOdometer}
+                  onChange={(e) => setFinalOdometer(e.target.value)}
+                  className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                  placeholder="e.g. 152000"
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Fuel Consumed (Liters)</label>
+                <input
+                  type="number"
+                  step="any"
+                  required
+                  value={fuelConsumed}
+                  onChange={(e) => setFuelConsumed(e.target.value)}
+                  className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                  placeholder="e.g. 120"
+                />
+              </div>
+              <div className="flex justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800/80">
+                <button
+                  type="button"
+                  disabled={submittingComplete}
+                  onClick={() => setCompletingTrip(null)}
+                  className="px-3.5 py-2 text-xs font-semibold rounded-xl border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-850 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingComplete}
+                  className="px-3.5 py-2 text-xs font-semibold rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-sm cursor-pointer"
+                >
+                  {submittingComplete ? "Submitting..." : "Submit Log"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

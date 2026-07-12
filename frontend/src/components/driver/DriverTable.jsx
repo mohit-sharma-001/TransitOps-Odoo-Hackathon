@@ -24,7 +24,8 @@ export default function DriverTable({
   onEditDriver,
   onDeleteDriver,
   onAddDriverClick,
-  onExportCSV
+  onExportCSV,
+  canManage
 }) {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All Statuses");
@@ -52,7 +53,12 @@ export default function DriverTable({
     let filtered = [...drivers];
 
     if (statusFilter !== "All Statuses") {
-      filtered = filtered.filter((d) => d.status === statusFilter);
+      filtered = filtered.filter((d) => 
+        d.status === statusFilter ||
+        (statusFilter === "Driving" && d.status === "OnTrip") ||
+        (statusFilter === "On Leave" && d.status === "OffDuty") ||
+        (statusFilter === "Offline" && d.status === "Suspended")
+      );
     }
     if (vehicleFilter !== "All Vehicles") {
       filtered = filtered.filter((d) => d.assignedVehicle === vehicleFilter);
@@ -98,7 +104,12 @@ export default function DriverTable({
   };
 
   const getStatusBadge = (status) => {
-    switch (status) {
+    let displayStatus = status;
+    if (status === "OnTrip") displayStatus = "Driving";
+    if (status === "OffDuty") displayStatus = "On Leave";
+    if (status === "Suspended") displayStatus = "Offline";
+
+    switch (displayStatus) {
       case "Available":
         return "bg-emerald-50 text-emerald-700 border-emerald-200/60 dark:bg-emerald-950/25 dark:text-emerald-400 dark:border-emerald-800/30";
       case "Driving":
@@ -106,14 +117,19 @@ export default function DriverTable({
       case "On Leave":
         return "bg-amber-50 text-amber-700 border-amber-200/60 dark:bg-amber-950/25 dark:text-amber-400 dark:border-amber-800/30";
       case "Offline":
-        return "bg-slate-100 text-slate-600 border-slate-200/60 dark:bg-slate-800/40 dark:text-slate-400 dark:border-slate-700/30";
+        return "bg-slate-100 text-slate-650 border-slate-200/60 dark:bg-slate-800/40 dark:text-slate-400 dark:border-slate-700/30";
       default:
-        return "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400";
+        return "bg-slate-105 text-slate-650 dark:bg-slate-800 dark:text-slate-400";
     }
   };
 
   const getStatusDot = (status) => {
-    switch (status) {
+    let displayStatus = status;
+    if (status === "OnTrip") displayStatus = "Driving";
+    if (status === "OffDuty") displayStatus = "On Leave";
+    if (status === "Suspended") displayStatus = "Offline";
+
+    switch (displayStatus) {
       case "Available": return "bg-emerald-500";
       case "Driving": return "bg-blue-500 animate-pulse";
       case "On Leave": return "bg-amber-500";
@@ -199,13 +215,15 @@ export default function DriverTable({
             >
               <RefreshCw className="h-3.5 w-3.5" />
             </button>
-            <button
-              onClick={onAddDriverClick}
-              className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-sm shadow-blue-500/10 transition-colors cursor-pointer"
-            >
-              <Plus className="h-3.5 w-3.5" />
-              <span>Add Driver</span>
-            </button>
+            {canManage && (
+              <button
+                onClick={onAddDriverClick}
+                className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-sm shadow-blue-500/10 transition-colors cursor-pointer"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                <span>Add Driver</span>
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -282,7 +300,10 @@ export default function DriverTable({
                     {/* License */}
                     <td className="px-3 py-3">
                       <p className="text-xs font-semibold text-slate-700 dark:text-slate-300 font-mono">{driver.licenseNumber}</p>
-                      <p className="text-[10px] text-slate-400 dark:text-slate-500">Exp: {driver.licenseExpiry}</p>
+                      <p className={`text-[10px] flex items-center gap-1 font-semibold ${driver.licenseValid === false ? "text-rose-500" : "text-slate-400 dark:text-slate-500"}`}>
+                        {driver.licenseValid === false && <span className="h-1 w-1 rounded-full bg-rose-500" />}
+                        Exp: {new Date(driver.licenseExpiry).toLocaleDateString("en-US", { month: "short", year: "numeric" })}
+                      </p>
                     </td>
 
                     {/* Vehicle */}
@@ -292,14 +313,14 @@ export default function DriverTable({
 
                     {/* Experience */}
                     <td className="px-3 py-3">
-                      <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">{driver.experience} yrs</span>
+                      <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">{driver.experience ?? 5} yrs</span>
                     </td>
 
                     {/* Rating */}
                     <td className="px-3 py-3">
                       <div className="flex items-center gap-1">
                         <Star className="h-3.5 w-3.5 text-amber-400 fill-amber-400" />
-                        <span className="text-xs font-bold text-slate-700 dark:text-slate-300">{driver.rating.toFixed(1)}</span>
+                        <span className="text-xs font-bold text-slate-700 dark:text-slate-300">{(driver.rating ?? 4.5).toFixed(1)}</span>
                       </div>
                     </td>
 
@@ -311,7 +332,6 @@ export default function DriverTable({
                       </span>
                     </td>
 
-                    {/* Actions */}
                     <td className="px-3 py-3 text-right">
                       <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button
@@ -321,20 +341,15 @@ export default function DriverTable({
                         >
                           <Eye className="h-3.5 w-3.5" />
                         </button>
-                        <button
-                          onClick={() => onEditDriver(driver)}
-                          className="p-1.5 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-950/30 text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 transition-colors cursor-pointer"
-                          title="Edit Driver"
-                        >
-                          <Edit2 className="h-3.5 w-3.5" />
-                        </button>
-                        <button
-                          onClick={() => onDeleteDriver(driver.id)}
-                          className="p-1.5 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/30 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 transition-colors cursor-pointer"
-                          title="Remove Driver"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
+                        {canManage && (
+                          <button
+                            onClick={() => onDeleteDriver(driver.id)}
+                            className="p-1.5 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/30 text-slate-400 hover:text-rose-600 dark:hover:text-rose-450 transition-colors cursor-pointer"
+                            title="Suspend Driver"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

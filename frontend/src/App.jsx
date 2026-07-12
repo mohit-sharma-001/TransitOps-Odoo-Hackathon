@@ -57,44 +57,62 @@ class ErrorBoundary extends React.Component {
   }
 }
 
+import { AuthProvider, useAuth } from "./context/AuthContext";
+
 function ProtectedRoute({ children }) {
-  const isAuthenticated = localStorage.getItem("isAuthenticated") === "true";
+  const { isAuthenticated, loading } = useAuth();
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#070b13]">
+        <div className="animate-spin h-8 w-8 text-blue-500 border-4 border-t-transparent rounded-full"></div>
+      </div>
+    );
+  }
   return isAuthenticated ? children : <Navigate to="/login" replace />;
 }
 
 function PublicRoute({ children }) {
-  const isAuthenticated = localStorage.getItem("isAuthenticated") === "true";
+  const { isAuthenticated, loading } = useAuth();
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#070b13]">
+        <div className="animate-spin h-8 w-8 text-blue-500 border-4 border-t-transparent rounded-full"></div>
+      </div>
+    );
+  }
   return isAuthenticated ? <Navigate to="/dashboard" replace /> : children;
 }
 
 function App() {
   return (
     <ErrorBoundary>
-      <ThemeProvider>
-        <BrowserRouter>
-          <Routes>
-            {/* Public Authentication Routes */}
-            <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
-            <Route path="/forgot-password" element={<PublicRoute><ForgotPassword /></PublicRoute>} />
+      <AuthProvider>
+        <ThemeProvider>
+          <BrowserRouter>
+            <Routes>
+              {/* Public Authentication Routes */}
+              <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+              <Route path="/forgot-password" element={<PublicRoute><ForgotPassword /></PublicRoute>} />
 
-            {/* Protected Main Layout Routes */}
-            <Route path="/" element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
-              <Route index element={<Navigate to="/dashboard" />} />
-              <Route path="dashboard" element={<Dashboard />} />
-              <Route path="vehicles" element={<VehicleList />} />
-              <Route path="drivers" element={<DriverList />} />
-              <Route path="trips" element={<TripList />} />
-              <Route path="maintenance" element={<MaintenanceList />} />
-              <Route path="fuel" element={<FuelLog />} />
-              <Route path="reports" element={<FuelEfficiency />} />
-              <Route path="settings" element={<Settings />} />
-            </Route>
+              {/* Protected Main Layout Routes */}
+              <Route path="/" element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
+                <Route index element={<Navigate to="/dashboard" />} />
+                <Route path="dashboard" element={<Dashboard />} />
+                <Route path="vehicles" element={<VehicleList />} />
+                <Route path="drivers" element={<DriverList />} />
+                <Route path="trips" element={<TripList />} />
+                <Route path="maintenance" element={<MaintenanceList />} />
+                <Route path="fuel" element={<FuelLog />} />
+                <Route path="reports" element={<FuelEfficiency />} />
+                <Route path="settings" element={<Settings />} />
+              </Route>
 
-            {/* Fallback 404 Route */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </ThemeProvider>
+              {/* Fallback 404 Route */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </ThemeProvider>
+      </AuthProvider>
     </ErrorBoundary>
   );
 }

@@ -21,7 +21,8 @@ export default function VehicleTable({
   onEditVehicle, 
   onDeleteVehicle, 
   onRegisterClick,
-  onExportCSV 
+  onExportCSV,
+  canManage
 }) {
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("All Types");
@@ -53,7 +54,11 @@ export default function VehicleTable({
 
     // Filter by status
     if (statusFilter !== "All Statuses") {
-      filtered = filtered.filter(v => v.status === statusFilter);
+      filtered = filtered.filter(v => 
+        v.status === statusFilter ||
+        (statusFilter === "On Trip" && v.status === "OnTrip") ||
+        (statusFilter === "Maintenance" && v.status === "InShop")
+      );
     }
 
     // Filter by search query
@@ -101,7 +106,11 @@ export default function VehicleTable({
   };
 
   const getStatusBadge = (status) => {
-    switch (status) {
+    let displayStatus = status;
+    if (status === "OnTrip") displayStatus = "On Trip";
+    if (status === "InShop") displayStatus = "Maintenance";
+
+    switch (displayStatus) {
       case "Available":
         return (
           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-450 border border-emerald-200/50 dark:border-emerald-900/30">
@@ -127,7 +136,11 @@ export default function VehicleTable({
           </span>
         );
       default:
-        return null;
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-400 border border-slate-200 dark:border-slate-700/50">
+            {status}
+          </span>
+        );
     }
   };
 
@@ -200,13 +213,15 @@ export default function VehicleTable({
 
         {/* Actions Button */}
         <div className="flex items-center gap-2 justify-end">
-          <button
-            onClick={onRegisterClick}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-sm shadow-blue-500/10 cursor-pointer transition-colors"
-          >
-            <Plus className="h-4 w-4" />
-            <span>Register Vehicle</span>
-          </button>
+          {canManage && (
+            <button
+              onClick={onRegisterClick}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-sm shadow-blue-500/10 cursor-pointer transition-colors"
+            >
+              <Plus className="h-4 w-4" />
+              <span>Register Vehicle</span>
+            </button>
+          )}
           
           <button
             onClick={onExportCSV}
@@ -305,20 +320,15 @@ export default function VehicleTable({
                       >
                         <Eye className="h-4 w-4" />
                       </button>
-                      <button
-                        onClick={() => onEditVehicle(vehicle)}
-                        className="p-1 rounded-lg text-slate-450 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-                        title="Edit Vehicle"
-                      >
-                        <Edit2 className="h-4 w-4" />
-                      </button>
-                      <button
-                        onClick={() => onDeleteVehicle(vehicle.id)}
-                        className="p-1 rounded-lg text-slate-450 dark:text-slate-500 hover:text-rose-600 dark:hover:text-rose-450 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-                        title="Delete Vehicle"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+                      {canManage && (
+                        <button
+                          onClick={() => onDeleteVehicle(vehicle.id)}
+                          className="p-1 rounded-lg text-slate-450 dark:text-slate-500 hover:text-rose-600 dark:hover:text-rose-450 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                          title="Retire Vehicle"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>

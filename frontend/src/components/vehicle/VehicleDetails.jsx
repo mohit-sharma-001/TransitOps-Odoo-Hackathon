@@ -1,7 +1,45 @@
 import { ArrowLeft, Calendar, Fuel, MapPin, Wrench, QrCode, FileText } from "lucide-react";
 import { motion } from "framer-motion";
+import { useEffect, useState } from "react";
+import vehicleService from "../../services/vehicleService";
+import { useAuth } from "../../context/AuthContext";
+import toast from "react-hot-toast";
 
 export default function VehicleDetails({ vehicle, onBack }) {
+  const { user } = useAuth();
+  const canManage = user?.role === "FleetManager";
+
+  const [costs, setCosts] = useState(null);
+  const [status, setStatus] = useState(vehicle.status);
+  const [updating, setUpdating] = useState(false);
+
+  useEffect(() => {
+    const fetchCosts = async () => {
+      try {
+        const data = await vehicleService.getVehicleCosts(vehicle.id);
+        setCosts(data);
+      } catch (error) {
+        console.error("Failed to load vehicle costs (likely unauthorized):", error);
+      }
+    };
+    fetchCosts();
+  }, [vehicle.id]);
+
+  const handleStatusChange = async (newStatus) => {
+    setUpdating(true);
+    try {
+      await vehicleService.updateVehicleStatus(vehicle.id, newStatus);
+      setStatus(newStatus);
+      toast.success(`Vehicle status updated to ${newStatus}`);
+    } catch (error) {
+      console.error(error);
+      const errMsg = error.response?.data?.error || "Failed to update status";
+      toast.error(errMsg);
+    } finally {
+      setUpdating(false);
+    }
+  };
+
   // Seeding dummy statistics/logs based on vehicle type or registration
   const maintenanceHistory = [
     { id: 1, type: "Routine Oil Change", date: "June 24, 2026", cost: 180, status: "Completed", notes: "Full synthetic oil, oil filter replaced." },
@@ -12,13 +50,13 @@ export default function VehicleDetails({ vehicle, onBack }) {
   const fuelLogs = {
     avgEfficiency: vehicle.type.includes("Heavy") ? "6.8 mpg" : vehicle.type.includes("EV") ? "0.45 kWh/mi" : "18.2 mpg",
     totalConsumption: vehicle.type.includes("EV") ? "4,820 kWh" : "3,240 Gal",
-    totalCost: vehicle.type.includes("EV") ? 1446 : 11988
+    totalCost: costs ? costs.fuelCost : 0
   };
 
   const tripSummary = {
-    completedTrips: 42,
-    activeDriver: "Alex Rivera",
-    totalDistance: vehicle.odometer - 15000 > 0 ? (vehicle.odometer - 15000).toLocaleString() : "24,500"
+    completedTrips: vehicle.trips ? vehicle.trips.filter(t => t.status === "Completed").length : 0,
+    activeDriver: "N/A",
+    totalDistance: vehicle.odometer ? vehicle.odometer.toLocaleString() : "0"
   };
 
   const formatCurrency = (val) => {
@@ -102,17 +140,31 @@ export default function VehicleDetails({ vehicle, onBack }) {
               </div>
               <div className="flex justify-between items-center text-sm">
                 <span className="text-slate-500 dark:text-slate-450">Status</span>
-                <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
-                  vehicle.status === "Available" 
-                    ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-400" 
-                    : vehicle.status === "On Trip" 
-                    ? "bg-blue-50 text-blue-700 dark:bg-blue-950/20 dark:text-blue-400"
-                    : vehicle.status === "Maintenance"
-                    ? "bg-amber-50 text-amber-700 dark:bg-amber-950/20 dark:text-amber-400"
-                    : "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-400"
-                }`}>
-                  {vehicle.status}
-                </span>
+                {canManage ? (
+                  <select
+                    value={status}
+                    disabled={updating}
+                    onChange={(e) => handleStatusChange(e.target.value)}
+                    className="px-2.5 py-1 rounded-xl border border-slate-250 dark:border-slate-850 bg-slate-50 dark:bg-slate-900 text-slate-850 dark:text-slate-200 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/20 cursor-pointer"
+                  >
+                    <option value="Available">Available</option>
+                    <option value="OnTrip">On Trip</option>
+                    <option value="InShop">Maintenance</option>
+                    <option value="Retired">Retired</option>
+                  </select>
+                ) : (
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+                    status === "Available" 
+                      ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-400" 
+                      : (status === "On Trip" || status === "OnTrip") 
+                      ? "bg-blue-50 text-blue-700 dark:bg-blue-950/20 dark:text-blue-400"
+                      : (status === "Maintenance" || status === "InShop")
+                      ? "bg-amber-50 text-amber-700 dark:bg-amber-950/20 dark:text-amber-400"
+                      : "bg-slate-100 text-slate-700 dark:bg-slate-850 dark:text-slate-400 border border-slate-200"
+                  }`}>
+                    {status === "OnTrip" ? "On Trip" : status === "InShop" ? "Maintenance" : status}
+                  </span>
+                )}
               </div>
             </div>
           </div>

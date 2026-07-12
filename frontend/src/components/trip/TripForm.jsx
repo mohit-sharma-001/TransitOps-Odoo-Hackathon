@@ -1,56 +1,58 @@
 import { useState, useEffect } from "react";
 import { ArrowLeft, Save, X, AlertCircle } from "lucide-react";
 import { motion } from "framer-motion";
-
-const availableDrivers = [
-  "Alex Rivera",
-  "Sarah Jenkins",
-  "Marcus Brody",
-  "David Miller",
-  "Elena Rostova",
-  "James Chen",
-  "Priya Sharma"
-];
-
-const availableVehicles = [
-  "Volvo FH16 (TRK-102)",
-  "Scania R500 (TRK-105)",
-  "Actros L (TRK-109)",
-  "Cascadia (TRK-101)",
-  "DAF XF (TRK-108)",
-  "Ford Transit (VAN-201)",
-  "Hino 268 (TRK-302)",
-  "Tesla Semi (EV-401)"
-];
+import vehicleService from "../../services/vehicleService";
+import driverService from "../../services/driverService";
+import toast from "react-hot-toast";
 
 export default function TripForm({ trip, onSave, onCancel }) {
   const isEdit = !!trip;
 
   const [formData, setFormData] = useState({
-    driver: "",
-    vehicle: "",
+    driverId: "",
+    vehicleId: "",
     source: "",
     destination: "",
-    cargoType: "General Freight",
+    cargoWeight: "5000",
     priority: "Medium",
     startTime: "",
-    estimatedArrival: "",
     notes: ""
   });
 
+  const [availableDrivers, setAvailableDrivers] = useState([]);
+  const [availableVehicles, setAvailableVehicles] = useState([]);
+  const [loadingAssets, setLoadingAssets] = useState(true);
   const [errors, setErrors] = useState({});
+
+  useEffect(() => {
+    const fetchAssets = async () => {
+      try {
+        const [driversData, vehiclesData] = await Promise.all([
+          driverService.getAvailableDrivers(),
+          vehicleService.getAvailableVehicles()
+        ]);
+        setAvailableDrivers(driversData);
+        setAvailableVehicles(vehiclesData);
+      } catch (error) {
+        console.error("Failed to load available fleet assets:", error);
+        toast.error("Failed to load available vehicles/drivers");
+      } finally {
+        setLoadingAssets(false);
+      }
+    };
+    fetchAssets();
+  }, []);
 
   useEffect(() => {
     if (trip) {
       setFormData({
-        driver: trip.driver || "",
-        vehicle: trip.vehicle || "",
+        driverId: trip.driverId || "",
+        vehicleId: trip.vehicleId || "",
         source: trip.source || "",
         destination: trip.destination || "",
-        cargoType: trip.cargoType || "General Freight",
+        cargoWeight: trip.cargoWeight?.toString() || "5000",
         priority: trip.priority || "Medium",
         startTime: trip.startTime ? new Date(trip.startTime).toISOString().slice(0, 16) : "",
-        estimatedArrival: trip.estimatedArrival || "",
         notes: trip.notes || ""
       });
     }
@@ -67,12 +69,14 @@ export default function TripForm({ trip, onSave, onCancel }) {
   const validate = () => {
     const newErrors = {};
 
-    if (!formData.driver) newErrors.driver = "Driver selection is required";
-    if (!formData.vehicle) newErrors.vehicle = "Vehicle selection is required";
+    if (!formData.driverId) newErrors.driverId = "Driver selection is required";
+    if (!formData.vehicleId) newErrors.vehicleId = "Vehicle selection is required";
     if (!formData.source.trim()) newErrors.source = "Pickup location is required";
     if (!formData.destination.trim()) newErrors.destination = "Destination is required";
     if (!formData.startTime) newErrors.startTime = "Departure time is required";
-    if (!formData.estimatedArrival.trim()) newErrors.estimatedArrival = "Estimated arrival is required";
+    if (!formData.cargoWeight || isNaN(formData.cargoWeight) || Number(formData.cargoWeight) <= 0) {
+      newErrors.cargoWeight = "Cargo weight must be a positive number";
+    }
 
     if (formData.source.trim() && formData.destination.trim() && 
         formData.source.trim().toLowerCase() === formData.destination.trim().toLowerCase()) {
@@ -87,31 +91,26 @@ export default function TripForm({ trip, onSave, onCancel }) {
     e.preventDefault();
     if (!validate()) return;
 
-    // Generate synthetic distance from city names hash
+    // Generate distance dynamically
     const distanceBase = (formData.source.length + formData.destination.length) * 42 + 120;
     const distance = Math.min(distanceBase, 2400);
 
     onSave({
-      id: trip ? trip.id : Date.now(),
-      tripId: trip ? trip.tripId : `TRP-${(9500 + Math.floor(Math.random() * 500))}`,
-      driver: formData.driver,
-      vehicle: formData.vehicle,
+      driverId: parseInt(formData.driverId),
+      vehicleId: parseInt(formData.vehicleId),
       source: formData.source.trim(),
       destination: formData.destination.trim(),
-      cargoType: formData.cargoType,
+      cargoWeight: parseFloat(formData.cargoWeight),
       priority: formData.priority,
-      distance: trip ? trip.distance : distance,
+      distance: distance,
       startTime: formData.startTime,
-      eta: formData.estimatedArrival,
-      estimatedArrival: formData.estimatedArrival,
-      notes: formData.notes.trim(),
-      status: trip ? trip.status : "Scheduled"
+      notes: formData.notes.trim()
     });
   };
 
   const inputClass = (fieldName) =>
     `w-full px-3 py-2 text-sm rounded-xl border bg-slate-50/50 dark:bg-slate-900/40 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 ${
-      errors[fieldName] ? "border-rose-400 dark:border-rose-800/60" : "border-slate-200 dark:border-slate-800"
+      errors[fieldName] ? "border-rose-450 dark:border-rose-800/60" : "border-slate-200 dark:border-slate-800"
     }`;
 
   return (
@@ -136,7 +135,7 @@ export default function TripForm({ trip, onSave, onCancel }) {
             {isEdit ? "Edit Trip Dispatch" : "Create New Trip"}
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            {isEdit ? "Update trip routing, scheduling, and cargo details" : "Dispatch a new cargo transport request to the fleet"}
+            {isEdit ? "Update trip routing, scheduling, and cargo details" : "Schedule a new cargo transport trip in the system"}
           </p>
         </div>
       </div>
@@ -146,57 +145,59 @@ export default function TripForm({ trip, onSave, onCancel }) {
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
 
-            {/* 1. Driver */}
+            {/* 1. Driver Select */}
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="driver" className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
-                Driver <span className="text-rose-500">*</span>
+              <label htmlFor="driverId" className="text-xs font-bold text-slate-650 dark:text-slate-400 uppercase tracking-wider">
+                Available Driver <span className="text-rose-500">*</span>
               </label>
               <select
-                id="driver"
-                name="driver"
-                value={formData.driver}
+                id="driverId"
+                name="driverId"
+                value={formData.driverId}
                 onChange={handleChange}
-                className={`${inputClass("driver")} cursor-pointer`}
+                disabled={loadingAssets}
+                className={`${inputClass("driverId")} cursor-pointer`}
               >
-                <option value="">Select a driver...</option>
+                <option value="">{loadingAssets ? "Loading drivers..." : "Select a driver..."}</option>
                 {availableDrivers.map((d) => (
-                  <option key={d} value={d}>{d}</option>
+                  <option key={d.id} value={d.id}>{d.name} (Safety Score: {d.safetyScore})</option>
                 ))}
               </select>
-              {errors.driver && (
+              {errors.driverId && (
                 <p className="text-xs text-rose-500 flex items-center gap-1 mt-0.5">
-                  <AlertCircle className="h-3 w-3" /> {errors.driver}
+                  <AlertCircle className="h-3 w-3" /> {errors.driverId}
                 </p>
               )}
             </div>
 
-            {/* 2. Vehicle */}
+            {/* 2. Vehicle Select */}
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="vehicle" className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
-                Vehicle <span className="text-rose-500">*</span>
+              <label htmlFor="vehicleId" className="text-xs font-bold text-slate-655 dark:text-slate-400 uppercase tracking-wider">
+                Available Vehicle <span className="text-rose-500">*</span>
               </label>
               <select
-                id="vehicle"
-                name="vehicle"
-                value={formData.vehicle}
+                id="vehicleId"
+                name="vehicleId"
+                value={formData.vehicleId}
                 onChange={handleChange}
-                className={`${inputClass("vehicle")} cursor-pointer`}
+                disabled={loadingAssets}
+                className={`${inputClass("vehicleId")} cursor-pointer`}
               >
-                <option value="">Select a vehicle...</option>
+                <option value="">{loadingAssets ? "Loading vehicles..." : "Select a vehicle..."}</option>
                 {availableVehicles.map((v) => (
-                  <option key={v} value={v}>{v}</option>
+                  <option key={v.id} value={v.id}>{v.name} ({v.registrationNumber})</option>
                 ))}
               </select>
-              {errors.vehicle && (
+              {errors.vehicleId && (
                 <p className="text-xs text-rose-500 flex items-center gap-1 mt-0.5">
-                  <AlertCircle className="h-3 w-3" /> {errors.vehicle}
+                  <AlertCircle className="h-3 w-3" /> {errors.vehicleId}
                 </p>
               )}
             </div>
 
             {/* 3. Pickup Location */}
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="source" className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
+              <label htmlFor="source" className="text-xs font-bold text-slate-650 dark:text-slate-400 uppercase tracking-wider">
                 Pickup Location <span className="text-rose-500">*</span>
               </label>
               <input
@@ -217,7 +218,7 @@ export default function TripForm({ trip, onSave, onCancel }) {
 
             {/* 4. Destination */}
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="destination" className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
+              <label htmlFor="destination" className="text-xs font-bold text-slate-650 dark:text-slate-400 uppercase tracking-wider">
                 Destination <span className="text-rose-500">*</span>
               </label>
               <input
@@ -236,32 +237,30 @@ export default function TripForm({ trip, onSave, onCancel }) {
               )}
             </div>
 
-            {/* 5. Cargo Type */}
+            {/* 5. Cargo Weight */}
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="cargoType" className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
-                Cargo Type
+              <label htmlFor="cargoWeight" className="text-xs font-bold text-slate-650 dark:text-slate-400 uppercase tracking-wider">
+                Cargo Weight (lbs) <span className="text-rose-500">*</span>
               </label>
-              <select
-                id="cargoType"
-                name="cargoType"
-                value={formData.cargoType}
+              <input
+                type="number"
+                id="cargoWeight"
+                name="cargoWeight"
+                value={formData.cargoWeight}
                 onChange={handleChange}
-                className={`${inputClass("cargoType")} cursor-pointer`}
-              >
-                <option>General Freight</option>
-                <option>Electronics</option>
-                <option>Pharmaceuticals</option>
-                <option>Perishable Goods</option>
-                <option>Industrial Steel</option>
-                <option>Auto Parts</option>
-                <option>Hazardous Materials</option>
-                <option>Temperature Controlled</option>
-              </select>
+                placeholder="e.g. 15000"
+                className={inputClass("cargoWeight")}
+              />
+              {errors.cargoWeight && (
+                <p className="text-xs text-rose-500 flex items-center gap-1 mt-0.5">
+                  <AlertCircle className="h-3 w-3" /> {errors.cargoWeight}
+                </p>
+              )}
             </div>
 
             {/* 6. Priority */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
+              <label className="text-xs font-bold text-slate-650 dark:text-slate-400 uppercase tracking-wider">
                 Priority Level
               </label>
               <div className="flex flex-wrap gap-2 mt-1">
@@ -288,7 +287,7 @@ export default function TripForm({ trip, onSave, onCancel }) {
 
             {/* 7. Departure Time */}
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="startTime" className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
+              <label htmlFor="startTime" className="text-xs font-bold text-slate-650 dark:text-slate-400 uppercase tracking-wider">
                 Departure Time <span className="text-rose-500">*</span>
               </label>
               <input
@@ -306,30 +305,9 @@ export default function TripForm({ trip, onSave, onCancel }) {
               )}
             </div>
 
-            {/* 8. Estimated Arrival */}
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="estimatedArrival" className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
-                Estimated Arrival <span className="text-rose-500">*</span>
-              </label>
-              <input
-                type="text"
-                id="estimatedArrival"
-                name="estimatedArrival"
-                value={formData.estimatedArrival}
-                onChange={handleChange}
-                placeholder="e.g. July 14, 5:30 PM"
-                className={inputClass("estimatedArrival")}
-              />
-              {errors.estimatedArrival && (
-                <p className="text-xs text-rose-500 flex items-center gap-1 mt-0.5">
-                  <AlertCircle className="h-3 w-3" /> {errors.estimatedArrival}
-                </p>
-              )}
-            </div>
-
-            {/* 9. Notes - Full Width */}
+            {/* 8. Notes - Full Width */}
             <div className="flex flex-col gap-1.5 md:col-span-2">
-              <label htmlFor="notes" className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
+              <label htmlFor="notes" className="text-xs font-bold text-slate-650 dark:text-slate-400 uppercase tracking-wider">
                 Dispatch Notes
               </label>
               <textarea
@@ -359,7 +337,7 @@ export default function TripForm({ trip, onSave, onCancel }) {
               className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-sm shadow-blue-500/10 transition-colors cursor-pointer"
             >
               <Save className="h-4 w-4" />
-              <span>{isEdit ? "Update Trip" : "Dispatch Trip"}</span>
+              <span>Create Draft Trip</span>
             </button>
           </div>
         </form>

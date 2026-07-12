@@ -1,4 +1,3 @@
-import { useState, useMemo } from "react";
 import { 
   Search, 
   ChevronDown, 
@@ -12,17 +11,25 @@ import {
   ChevronLeft, 
   ChevronRight,
   Calendar,
-  AlertCircle
+  AlertCircle,
+  Play,
+  CheckCircle2,
+  XCircle
 } from "lucide-react";
 import toast from "react-hot-toast";
+
+import { useState, useMemo } from "react";
 
 export default function TripTable({ 
   trips, 
   onViewDetails, 
-  onEditTrip, 
-  onDeleteTrip, 
+  onDispatchTrip, 
+  onCompleteTrip, 
+  onCancelTrip, 
   onCreateTripClick,
-  onExportCSV 
+  onExportCSV,
+  canManage,
+  isLoading
 }) {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All Statuses");
@@ -134,29 +141,23 @@ export default function TripTable({
 
   const getStatusBadge = (status) => {
     switch (status) {
-      case "Scheduled":
+      case "Draft":
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 dark:bg-indigo-950/20 dark:text-indigo-400 border border-indigo-200/50 dark:border-indigo-900/30">
-            Scheduled
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 dark:bg-slate-800/40 dark:text-slate-400 border border-slate-200 dark:border-slate-700/50">
+            Draft
           </span>
         );
-      case "In Progress":
+      case "Dispatched":
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 dark:bg-blue-950/20 dark:text-blue-400 border border-blue-200/50 dark:border-blue-800/30">
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 dark:bg-blue-950/20 dark:text-blue-400 border border-blue-200/50 dark:border-blue-900/30">
             <span className="h-1 w-1 rounded-full bg-blue-500 animate-pulse" />
-            In Progress
+            Dispatched
           </span>
         );
       case "Completed":
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-400 border border-emerald-200/50 dark:border-emerald-800/30">
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-450 border border-emerald-200/50 dark:border-emerald-900/30">
             Completed
-          </span>
-        );
-      case "Delayed":
-        return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 dark:bg-amber-950/20 dark:text-amber-400 border border-amber-200/50 dark:border-amber-900/30">
-            Delayed
           </span>
         );
       case "Cancelled":
@@ -166,7 +167,25 @@ export default function TripTable({
           </span>
         );
       default:
-        return null;
+        if (status === "Scheduled") {
+          return (
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+              Draft
+            </span>
+          );
+        }
+        if (status === "In Progress" || status === "Delayed") {
+          return (
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-55 text-blue-700 border border-blue-200">
+              Dispatched
+            </span>
+          );
+        }
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+            {status}
+          </span>
+        );
     }
   };
 
@@ -264,13 +283,15 @@ export default function TripTable({
 
           {/* Action triggers */}
           <div className="flex items-center gap-2 justify-end">
-            <button
-              onClick={onCreateTripClick}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-sm shadow-blue-500/10 cursor-pointer transition-colors"
-            >
-              <Plus className="h-4 w-4" />
-              <span>Create Trip</span>
-            </button>
+            {canManage && (
+              <button
+                onClick={onCreateTripClick}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-sm shadow-blue-500/10 cursor-pointer transition-colors"
+              >
+                <Plus className="h-4 w-4" />
+                <span>Create Trip</span>
+              </button>
+            )}
             
             <button
               onClick={onExportCSV}
@@ -438,31 +459,44 @@ export default function TripTable({
                       >
                         <Eye className="h-4 w-4" />
                       </button>
-                      <button
-                        onClick={() => onEditTrip(trip)}
-                        className="p-1 rounded-lg text-slate-450 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-                        title="Edit Trip"
-                      >
-                        <Edit2 className="h-4 w-4" />
-                      </button>
-                      <button
-                        onClick={() => onDeleteTrip(trip.id)}
-                        className="p-1 rounded-lg text-slate-450 dark:text-slate-500 hover:text-rose-650 dark:hover:text-rose-450 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-                        title="Delete Trip"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+                      {canManage && (trip.status === "Draft" || trip.status === "Scheduled") && (
+                        <button
+                          onClick={() => onDispatchTrip(trip.id)}
+                          className="p-1 rounded-lg text-emerald-600 dark:text-emerald-500 hover:bg-emerald-100 dark:hover:bg-emerald-800/20 transition-colors cursor-pointer"
+                          title="Dispatch Trip"
+                        >
+                          <Play className="h-4 w-4" />
+                        </button>
+                      )}
+                      {canManage && (trip.status === "Dispatched" || trip.status === "In Progress" || trip.status === "Delayed") && (
+                        <button
+                          onClick={() => onCompleteTrip(trip)}
+                          className="p-1 rounded-lg text-blue-600 dark:text-blue-500 hover:bg-blue-100 dark:hover:bg-blue-800/20 transition-colors cursor-pointer"
+                          title="Complete Trip"
+                        >
+                          <CheckCircle2 className="h-4 w-4" />
+                        </button>
+                      )}
+                      {canManage && (trip.status === "Draft" || trip.status === "Dispatched" || trip.status === "Scheduled" || trip.status === "In Progress" || trip.status === "Delayed") && (
+                        <button
+                          onClick={() => onCancelTrip(trip.id)}
+                          className="p-1 rounded-lg text-rose-600 dark:text-rose-500 hover:bg-rose-100 dark:hover:bg-rose-800/20 transition-colors cursor-pointer"
+                          title="Cancel Trip"
+                        >
+                          <XCircle className="h-4 w-4" />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
               ))
-            ) : (
+            {isLoading ? (
               <tr>
-                <td colSpan="10" className="py-8 text-center text-slate-400 dark:text-slate-500">
-                  No matching trips found.
+                <td colSpan="10" className="py-16 text-center text-slate-400 dark:text-slate-500 font-semibold">
+                  Loading trip roster...
                 </td>
               </tr>
-            )}
+            ) : paginatedTrips.length > 0 ? (
           </tbody>
         </table>
       </div>

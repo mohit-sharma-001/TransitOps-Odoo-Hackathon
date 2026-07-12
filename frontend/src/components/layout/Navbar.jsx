@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Menu, Search, Bell, Calendar } from "lucide-react";
 import ThemeToggle from "../common/ThemeToggle";
+import { useAuth } from "../../context/AuthContext";
 
 export default function Navbar({
   sidebarOpen,
@@ -9,6 +10,7 @@ export default function Navbar({
   sidebarCollapsed,
   setSidebarCollapsed
 }) {
+  const { user, logout } = useAuth();
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [searchFocused, setSearchFocused] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
@@ -125,11 +127,11 @@ export default function Navbar({
             className="flex items-center gap-2 pl-2 border-l border-slate-200/80 dark:border-slate-800/40 hover:opacity-80 transition-opacity cursor-pointer text-left"
           >
             <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 text-white flex items-center justify-center font-semibold text-xs shadow-md">
-              DJ
+              {user ? user.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) : 'U'}
             </div>
             <div className="hidden lg:block">
-              <p className="text-xs font-semibold text-slate-950 dark:text-slate-200 leading-none">Deepesh Joshi</p>
-              <p className="text-[10px] text-slate-500 leading-none mt-1">Fleet Manager</p>
+              <p className="text-xs font-semibold text-slate-950 dark:text-slate-200 leading-none">{user ? user.name : 'User'}</p>
+              <p className="text-[10px] text-slate-500 leading-none mt-1">{user ? user.role : 'Guest'}</p>
             </div>
           </button>
 
@@ -152,11 +154,7 @@ export default function Navbar({
                 <button
                   onClick={() => {
                     setProfileDropdownOpen(false);
-                    localStorage.removeItem("isAuthenticated");
-                    toast.success("Successfully logged out", {
-                      style: { borderRadius: "12px", background: "#0d1527", color: "#fff" }
-                    });
-                    window.location.href = "/login";
+                    logout();
                   }}
                   className="w-full flex items-center gap-2 px-4 py-2 text-xs font-semibold text-rose-600 dark:text-rose-450 hover:bg-rose-50 dark:hover:bg-rose-950/20 transition-colors text-left cursor-pointer"
                 >

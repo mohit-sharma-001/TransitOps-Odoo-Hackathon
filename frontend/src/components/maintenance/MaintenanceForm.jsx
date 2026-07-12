@@ -1,25 +1,8 @@
 import { useState, useEffect } from "react";
 import { ArrowLeft, Save, X, AlertCircle } from "lucide-react";
 import { motion } from "framer-motion";
-
-const availableVehicles = [
-  { name: "Volvo FH16", reg: "TRK-102" },
-  { name: "Scania R500", reg: "TRK-105" },
-  { name: "Actros L", reg: "TRK-109" },
-  { name: "Cascadia", reg: "TRK-101" },
-  { name: "DAF XF", reg: "TRK-108" },
-  { name: "Ford Transit", reg: "VAN-201" },
-  { name: "Hino 268", reg: "TRK-302" },
-  { name: "Tesla Semi", reg: "EV-401" }
-];
-
-const mechanics = [
-  "Tony Morales",
-  "Frank Peterson",
-  "Linda Cho",
-  "Robert Harris",
-  "Diana Vasquez"
-];
+import vehicleService from "../../services/vehicleService";
+import toast from "react-hot-toast";
 
 const serviceTypes = [
   "Oil Change",
@@ -38,30 +21,37 @@ export default function MaintenanceForm({ record, onSave, onCancel }) {
   const isEdit = !!record;
 
   const [formData, setFormData] = useState({
-    vehicle: "",
-    serviceType: "",
-    mechanic: "",
-    scheduledDate: "",
-    completionDate: "",
+    vehicleId: "",
+    serviceType: "Oil Change",
     cost: "",
-    priority: "Medium",
-    status: "Scheduled",
     notes: ""
   });
 
+  const [vehicles, setVehicles] = useState([]);
+  const [loadingVehicles, setLoadingVehicles] = useState(true);
   const [errors, setErrors] = useState({});
+
+  useEffect(() => {
+    const loadVehicles = async () => {
+      try {
+        const data = await vehicleService.getVehicles();
+        setVehicles(data);
+      } catch (error) {
+        console.error(error);
+        toast.error("Failed to load vehicle list");
+      } finally {
+        setLoadingVehicles(false);
+      }
+    };
+    loadVehicles();
+  }, []);
 
   useEffect(() => {
     if (record) {
       setFormData({
-        vehicle: record.vehicle || "",
-        serviceType: record.serviceType || "",
-        mechanic: record.mechanic || "",
-        scheduledDate: record.scheduledDate || "",
-        completionDate: record.completionDate || "",
+        vehicleId: record.vehicleId || "",
+        serviceType: record.serviceType || "Oil Change",
         cost: record.cost?.toString() || "",
-        priority: record.priority || "Medium",
-        status: record.status || "Scheduled",
         notes: record.notes || ""
       });
     }
@@ -75,12 +65,10 @@ export default function MaintenanceForm({ record, onSave, onCancel }) {
 
   const validate = () => {
     const newErrors = {};
-    if (!formData.vehicle) newErrors.vehicle = "Vehicle selection is required";
+    if (!formData.vehicleId) newErrors.vehicleId = "Vehicle selection is required";
     if (!formData.serviceType) newErrors.serviceType = "Service type is required";
-    if (!formData.mechanic) newErrors.mechanic = "Mechanic assignment is required";
-    if (!formData.scheduledDate) newErrors.scheduledDate = "Scheduled date is required";
     if (!formData.cost || isNaN(formData.cost) || Number(formData.cost) <= 0) {
-      newErrors.cost = "Valid estimated cost is required";
+      newErrors.cost = "Valid cost is required";
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -90,29 +78,16 @@ export default function MaintenanceForm({ record, onSave, onCancel }) {
     e.preventDefault();
     if (!validate()) return;
 
-    const selectedVehicle = availableVehicles.find(
-      (v) => `${v.name} (${v.reg})` === formData.vehicle
-    );
-
     onSave({
-      id: record ? record.id : Date.now(),
-      maintenanceId: record ? record.maintenanceId : `MNT-${(6000 + Math.floor(Math.random() * 999))}`,
-      vehicle: formData.vehicle,
-      regNumber: selectedVehicle ? selectedVehicle.reg : record?.regNumber || "N/A",
-      serviceType: formData.serviceType,
-      mechanic: formData.mechanic,
-      scheduledDate: formData.scheduledDate,
-      completionDate: formData.completionDate || null,
-      cost: Number(formData.cost),
-      priority: formData.priority,
-      status: formData.status,
-      notes: formData.notes.trim()
+      vehicleId: parseInt(formData.vehicleId),
+      description: `${formData.serviceType}: ${formData.notes.trim()}`,
+      cost: parseFloat(formData.cost)
     });
   };
 
   const inputClass = (fieldName) =>
     `w-full px-3 py-2 text-sm rounded-xl border bg-slate-50/50 dark:bg-slate-900/40 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 ${
-      errors[fieldName] ? "border-rose-400 dark:border-rose-800/60" : "border-slate-200 dark:border-slate-800"
+      errors[fieldName] ? "border-rose-450 dark:border-rose-800/60" : "border-slate-200 dark:border-slate-800"
     }`;
 
   return (
@@ -130,10 +105,10 @@ export default function MaintenanceForm({ record, onSave, onCancel }) {
         </button>
         <div>
           <h1 className="text-xl md:text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-            {isEdit ? "Edit Service Record" : "Schedule Maintenance"}
+            Log Maintenance Activity
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            {isEdit ? "Update service details, scheduling, and cost information" : "Create a new maintenance work order for a fleet vehicle"}
+            Log diagnostic status, parts cost, and details of vehicle maintenance.
           </p>
         </div>
       </div>
@@ -143,133 +118,62 @@ export default function MaintenanceForm({ record, onSave, onCancel }) {
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
 
-            {/* Vehicle */}
+            {/* Vehicle Select */}
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="vehicle" className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
+              <label htmlFor="vehicleId" className="text-xs font-bold text-slate-650 dark:text-slate-400 uppercase tracking-wider">
                 Vehicle <span className="text-rose-500">*</span>
               </label>
-              <select id="vehicle" name="vehicle" value={formData.vehicle} onChange={handleChange} className={`${inputClass("vehicle")} cursor-pointer`}>
-                <option value="">Select a vehicle...</option>
-                {availableVehicles.map((v) => (
-                  <option key={v.reg} value={`${v.name} (${v.reg})`}>{v.name} ({v.reg})</option>
+              <select 
+                id="vehicleId" 
+                name="vehicleId" 
+                value={formData.vehicleId} 
+                onChange={handleChange} 
+                disabled={loadingVehicles} 
+                className={`${inputClass("vehicleId")} cursor-pointer`}
+              >
+                <option value="">{loadingVehicles ? "Loading vehicles..." : "Select a vehicle..."}</option>
+                {vehicles.map((v) => (
+                  <option key={v.id} value={v.id}>{v.name} ({v.registrationNumber})</option>
                 ))}
               </select>
-              {errors.vehicle && <p className="text-xs text-rose-500 flex items-center gap-1 mt-0.5"><AlertCircle className="h-3 w-3" /> {errors.vehicle}</p>}
+              {errors.vehicleId && <p className="text-xs text-rose-500 flex items-center gap-1 mt-0.5"><AlertCircle className="h-3 w-3" /> {errors.vehicleId}</p>}
             </div>
 
             {/* Service Type */}
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="serviceType" className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
+              <label htmlFor="serviceType" className="text-xs font-bold text-slate-650 dark:text-slate-400 uppercase tracking-wider">
                 Service Type <span className="text-rose-500">*</span>
               </label>
               <select id="serviceType" name="serviceType" value={formData.serviceType} onChange={handleChange} className={`${inputClass("serviceType")} cursor-pointer`}>
-                <option value="">Select service type...</option>
                 {serviceTypes.map((t) => <option key={t} value={t}>{t}</option>)}
               </select>
-              {errors.serviceType && <p className="text-xs text-rose-500 flex items-center gap-1 mt-0.5"><AlertCircle className="h-3 w-3" /> {errors.serviceType}</p>}
-            </div>
-
-            {/* Mechanic */}
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="mechanic" className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
-                Assigned Mechanic <span className="text-rose-500">*</span>
-              </label>
-              <select id="mechanic" name="mechanic" value={formData.mechanic} onChange={handleChange} className={`${inputClass("mechanic")} cursor-pointer`}>
-                <option value="">Select a mechanic...</option>
-                {mechanics.map((m) => <option key={m} value={m}>{m}</option>)}
-              </select>
-              {errors.mechanic && <p className="text-xs text-rose-500 flex items-center gap-1 mt-0.5"><AlertCircle className="h-3 w-3" /> {errors.mechanic}</p>}
-            </div>
-
-            {/* Scheduled Date */}
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="scheduledDate" className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
-                Scheduled Date <span className="text-rose-500">*</span>
-              </label>
-              <input type="date" id="scheduledDate" name="scheduledDate" value={formData.scheduledDate} onChange={handleChange} className={`${inputClass("scheduledDate")} cursor-pointer`} />
-              {errors.scheduledDate && <p className="text-xs text-rose-500 flex items-center gap-1 mt-0.5"><AlertCircle className="h-3 w-3" /> {errors.scheduledDate}</p>}
-            </div>
-
-            {/* Completion Date */}
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="completionDate" className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
-                Completion Date
-              </label>
-              <input type="date" id="completionDate" name="completionDate" value={formData.completionDate} onChange={handleChange} className={`${inputClass("completionDate")} cursor-pointer`} />
             </div>
 
             {/* Cost */}
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="cost" className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
-                Estimated Cost ($) <span className="text-rose-500">*</span>
+              <label htmlFor="cost" className="text-xs font-bold text-slate-650 dark:text-slate-400 uppercase tracking-wider">
+                Cost ($) <span className="text-rose-500">*</span>
               </label>
               <input type="number" id="cost" name="cost" min="0" step="0.01" value={formData.cost} onChange={handleChange} placeholder="450" className={inputClass("cost")} />
               {errors.cost && <p className="text-xs text-rose-500 flex items-center gap-1 mt-0.5"><AlertCircle className="h-3 w-3" /> {errors.cost}</p>}
             </div>
 
-            {/* Priority */}
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">Priority Level</label>
-              <div className="flex flex-wrap gap-2 mt-1">
-                {["Low", "Medium", "High", "Critical"].map((p) => (
-                  <button
-                    key={p}
-                    type="button"
-                    onClick={() => setFormData((prev) => ({ ...prev, priority: p }))}
-                    className={`px-3 py-1.5 rounded-xl border text-xs font-semibold cursor-pointer transition-all duration-150
-                      ${formData.priority === p
-                        ? p === "Critical" ? "bg-rose-600 border-rose-600 text-white shadow-sm"
-                        : p === "High" ? "bg-amber-500 border-amber-500 text-white shadow-sm"
-                        : "bg-blue-600 border-blue-600 text-white shadow-sm"
-                        : "border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 bg-slate-50/50 dark:bg-slate-900/10 hover:bg-slate-100 dark:hover:bg-slate-800"
-                      }`}
-                  >
-                    {p}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Status (edit mode) */}
-            {isEdit && (
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">Status</label>
-                <div className="flex flex-wrap gap-2 mt-1">
-                  {["Scheduled", "In Progress", "Completed", "Overdue", "Cancelled"].map((s) => (
-                    <button
-                      key={s}
-                      type="button"
-                      onClick={() => setFormData((prev) => ({ ...prev, status: s }))}
-                      className={`px-3 py-1.5 rounded-xl border text-xs font-semibold cursor-pointer transition-all duration-150
-                        ${formData.status === s
-                          ? s === "Completed" ? "bg-emerald-600 border-emerald-600 text-white shadow-sm"
-                          : s === "Overdue" ? "bg-rose-600 border-rose-600 text-white shadow-sm"
-                          : s === "Cancelled" ? "bg-slate-600 border-slate-600 text-white shadow-sm"
-                          : "bg-blue-600 border-blue-600 text-white shadow-sm"
-                          : "border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 bg-slate-50/50 dark:bg-slate-900/10 hover:bg-slate-100 dark:hover:bg-slate-800"
-                        }`}
-                    >
-                      {s}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
             {/* Notes */}
             <div className="flex flex-col gap-1.5 md:col-span-2">
-              <label htmlFor="notes" className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">Service Notes</label>
-              <textarea id="notes" name="notes" rows={3} value={formData.notes} onChange={handleChange} placeholder="Describe the issue, requested service, or special instructions..." className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 resize-none" />
+              <label htmlFor="notes" className="text-xs font-bold text-slate-650 dark:text-slate-400 uppercase tracking-wider">Work Details / Notes</label>
+              <textarea id="notes" name="notes" rows={3} value={formData.notes} onChange={handleChange} placeholder="Enter service notes, replaced parts, or diagnostics..." className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 resize-none" />
             </div>
           </div>
 
-          {/* Actions */}
+          {/* Form Actions */}
           <div className="flex items-center justify-end gap-3 border-t border-slate-100 dark:border-slate-800/80 pt-5">
             <button onClick={onCancel} type="button" className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold rounded-xl border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer">
-              <X className="h-4 w-4" /><span>Cancel</span>
+              <X className="h-4 w-4" />
+              <span>Cancel</span>
             </button>
             <button type="submit" className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-sm shadow-blue-500/10 transition-colors cursor-pointer">
-              <Save className="h-4 w-4" /><span>{isEdit ? "Update Record" : "Schedule Service"}</span>
+              <Save className="h-4 w-4" />
+              <span>Save Record</span>
             </button>
           </div>
         </form>

@@ -23,6 +23,7 @@ export default function DriverForm({ driver, onSave, onCancel }) {
     address: "",
     dateOfBirth: "",
     licenseNumber: "",
+    licenseCategory: "CDL-A",
     licenseExpiry: "",
     assignedVehicle: "",
     experience: "",
@@ -39,9 +40,10 @@ export default function DriverForm({ driver, onSave, onCancel }) {
         phone: driver.phone || "",
         email: driver.email || "",
         address: driver.address || "",
-        dateOfBirth: driver.dateOfBirth || "",
+        dateOfBirth: driver.dateOfBirth ? new Date(driver.dateOfBirth).toISOString().split('T')[0] : "",
         licenseNumber: driver.licenseNumber || "",
-        licenseExpiry: driver.licenseExpiry || "",
+        licenseCategory: driver.licenseCategory || "CDL-A",
+        licenseExpiry: driver.licenseExpiry ? new Date(driver.licenseExpiry).toISOString().split('T')[0] : "",
         assignedVehicle: driver.assignedVehicle || "",
         experience: driver.experience?.toString() || "",
         status: driver.status || "Available",
@@ -89,24 +91,19 @@ export default function DriverForm({ driver, onSave, onCancel }) {
       address: formData.address.trim(),
       dateOfBirth: formData.dateOfBirth,
       licenseNumber: formData.licenseNumber.trim(),
+      licenseCategory: formData.licenseCategory,
       licenseExpiry: formData.licenseExpiry,
       assignedVehicle: formData.assignedVehicle,
       experience: Number(formData.experience),
       rating: driver ? driver.rating : 4.5,
       status: formData.status,
-      notes: formData.notes.trim(),
-      totalTrips: driver?.totalTrips || 0,
-      totalDistance: driver?.totalDistance || 0,
-      deliveriesCompleted: driver?.deliveriesCompleted || 0,
-      fuelEfficiency: driver?.fuelEfficiency || 7.5,
-      safetyScore: driver?.safetyScore || 90,
-      lateDeliveries: driver?.lateDeliveries || 0
+      notes: formData.notes.trim()
     });
   };
 
   const inputClass = (fieldName) =>
     `w-full px-3 py-2 text-sm rounded-xl border bg-slate-50/50 dark:bg-slate-900/40 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 ${
-      errors[fieldName] ? "border-rose-400 dark:border-rose-800/60" : "border-slate-200 dark:border-slate-800"
+      errors[fieldName] ? "border-rose-450 dark:border-rose-800/60" : "border-slate-200 dark:border-slate-800"
     }`;
 
   return (
@@ -124,7 +121,7 @@ export default function DriverForm({ driver, onSave, onCancel }) {
         </button>
         <div>
           <h1 className="text-xl md:text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-            {isEdit ? "Edit Driver Record" : "Register New Driver"}
+            {isEdit ? "Edit Driver Record" : "Register New CDL Driver"}
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
             {isEdit ? "Update driver profile, credentials, and assignment details" : "Add a new CDL-certified driver to the fleet roster"}
@@ -157,7 +154,7 @@ export default function DriverForm({ driver, onSave, onCancel }) {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             {/* Name */}
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="name" className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
+              <label htmlFor="name" className="text-xs font-bold text-slate-650 dark:text-slate-400 uppercase tracking-wider">
                 Full Name <span className="text-rose-500">*</span>
               </label>
               <input type="text" id="name" name="name" value={formData.name} onChange={handleChange} placeholder="e.g. Alex Rivera" className={inputClass("name")} />
@@ -166,7 +163,7 @@ export default function DriverForm({ driver, onSave, onCancel }) {
 
             {/* Phone */}
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="phone" className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
+              <label htmlFor="phone" className="text-xs font-bold text-slate-650 dark:text-slate-400 uppercase tracking-wider">
                 Phone <span className="text-rose-500">*</span>
               </label>
               <input type="tel" id="phone" name="phone" value={formData.phone} onChange={handleChange} placeholder="(555) 123-4567" className={inputClass("phone")} />
@@ -175,7 +172,7 @@ export default function DriverForm({ driver, onSave, onCancel }) {
 
             {/* Email */}
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="email" className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
+              <label htmlFor="email" className="text-xs font-bold text-slate-650 dark:text-slate-400 uppercase tracking-wider">
                 Email <span className="text-rose-500">*</span>
               </label>
               <input type="email" id="email" name="email" value={formData.email} onChange={handleChange} placeholder="alex@transitops.com" className={inputClass("email")} />
@@ -184,37 +181,55 @@ export default function DriverForm({ driver, onSave, onCancel }) {
 
             {/* Address */}
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="address" className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">Address</label>
+              <label htmlFor="address" className="text-xs font-bold text-slate-650 dark:text-slate-400 uppercase tracking-wider">Address</label>
               <input type="text" id="address" name="address" value={formData.address} onChange={handleChange} placeholder="742 Freight Ln, Dallas, TX" className={inputClass("address")} />
             </div>
 
             {/* Date of Birth */}
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="dateOfBirth" className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">Date of Birth</label>
+              <label htmlFor="dateOfBirth" className="text-xs font-bold text-slate-650 dark:text-slate-400 uppercase tracking-wider">Date of Birth</label>
               <input type="date" id="dateOfBirth" name="dateOfBirth" value={formData.dateOfBirth} onChange={handleChange} className={`${inputClass("dateOfBirth")} cursor-pointer`} />
             </div>
 
             {/* License Number */}
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="licenseNumber" className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
+              <label htmlFor="licenseNumber" className="text-xs font-bold text-slate-650 dark:text-slate-400 uppercase tracking-wider">
                 License Number <span className="text-rose-500">*</span>
               </label>
               <input type="text" id="licenseNumber" name="licenseNumber" value={formData.licenseNumber} onChange={handleChange} placeholder="CDL-A-2847591" className={inputClass("licenseNumber")} />
               {errors.licenseNumber && <p className="text-xs text-rose-500 flex items-center gap-1 mt-0.5"><AlertCircle className="h-3 w-3" /> {errors.licenseNumber}</p>}
             </div>
 
+            {/* License Category */}
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="licenseCategory" className="text-xs font-bold text-slate-650 dark:text-slate-400 uppercase tracking-wider">
+                License Category <span className="text-rose-500">*</span>
+              </label>
+              <select
+                id="licenseCategory"
+                name="licenseCategory"
+                value={formData.licenseCategory || "CDL-A"}
+                onChange={handleChange}
+                className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all cursor-pointer"
+              >
+                <option value="CDL-A">Class A CDL (CDL-A)</option>
+                <option value="CDL-B">Class B CDL (CDL-B)</option>
+                <option value="CDL-C">Class C CDL (CDL-C)</option>
+              </select>
+            </div>
+
             {/* License Expiry */}
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="licenseExpiry" className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
+              <label htmlFor="licenseExpiry" className="text-xs font-bold text-slate-650 dark:text-slate-400 uppercase tracking-wider">
                 License Expiry <span className="text-rose-500">*</span>
               </label>
-              <input type="text" id="licenseExpiry" name="licenseExpiry" value={formData.licenseExpiry} onChange={handleChange} placeholder="Dec 2027" className={inputClass("licenseExpiry")} />
+              <input type="date" id="licenseExpiry" name="licenseExpiry" value={formData.licenseExpiry} onChange={handleChange} className={`${inputClass("licenseExpiry")} cursor-pointer`} />
               {errors.licenseExpiry && <p className="text-xs text-rose-500 flex items-center gap-1 mt-0.5"><AlertCircle className="h-3 w-3" /> {errors.licenseExpiry}</p>}
             </div>
 
             {/* Vehicle Assignment */}
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="assignedVehicle" className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">Vehicle Assignment</label>
+              <label htmlFor="assignedVehicle" className="text-xs font-bold text-slate-650 dark:text-slate-400 uppercase tracking-wider">Vehicle Assignment</label>
               <select id="assignedVehicle" name="assignedVehicle" value={formData.assignedVehicle} onChange={handleChange} className={`${inputClass("assignedVehicle")} cursor-pointer`}>
                 <option value="">Unassigned</option>
                 {availableVehicles.map((v) => <option key={v} value={v}>{v}</option>)}
@@ -223,7 +238,7 @@ export default function DriverForm({ driver, onSave, onCancel }) {
 
             {/* Experience */}
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="experience" className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
+              <label htmlFor="experience" className="text-xs font-bold text-slate-650 dark:text-slate-400 uppercase tracking-wider">
                 Experience (Years) <span className="text-rose-500">*</span>
               </label>
               <input type="number" id="experience" name="experience" min="0" max="50" value={formData.experience} onChange={handleChange} placeholder="6" className={inputClass("experience")} />
@@ -232,7 +247,7 @@ export default function DriverForm({ driver, onSave, onCancel }) {
 
             {/* Status */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">Current Status</label>
+              <label className="text-xs font-bold text-slate-650 dark:text-slate-400 uppercase tracking-wider">Current Status</label>
               <div className="flex flex-wrap gap-2 mt-1">
                 {["Available", "Driving", "On Leave", "Offline"].map((s) => (
                   <button
@@ -259,7 +274,7 @@ export default function DriverForm({ driver, onSave, onCancel }) {
 
             {/* Notes - Full Width */}
             <div className="flex flex-col gap-1.5 md:col-span-2">
-              <label htmlFor="notes" className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">Notes</label>
+              <label htmlFor="notes" className="text-xs font-bold text-slate-650 dark:text-slate-400 uppercase tracking-wider">Notes</label>
               <textarea id="notes" name="notes" rows={3} value={formData.notes} onChange={handleChange} placeholder="Certifications, endorsements, special qualifications..." className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 resize-none" />
             </div>
           </div>
