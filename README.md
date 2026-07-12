@@ -5,4 +5,5 @@ TransitOps is a digital system built to manage and automate transport company op
 ## Repository Layout
 *   `/backend` - Node.js Express server + Prisma + SQLite backend application
 *   `README.md` - Repository overview
+*   `/frontend` - frontend data 
 
