@@ -9,6 +9,7 @@ const tripRoutes = require('./trip.routes');
 const maintenanceRoutes = require('./maintenance.routes');
 const fuelRoutes = require('./fuel.routes');
 const expenseRoutes = require('./expense.routes');
+const dashboardRoutes = require('./dashboard.routes');
 
 // Mount routes
 router.use('/health', healthRoutes);
@@ -19,5 +20,6 @@ router.use('/trips', tripRoutes);
 router.use('/maintenance', maintenanceRoutes);
 router.use('/fuel', fuelRoutes);
 router.use('/expenses', expenseRoutes);
+router.use('/dashboard', dashboardRoutes);
 
 module.exports = router;
