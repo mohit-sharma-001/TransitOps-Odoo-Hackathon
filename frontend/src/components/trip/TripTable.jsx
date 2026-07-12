@@ -399,7 +399,26 @@ export default function TripTable({
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 dark:divide-slate-800/50">
-            {paginatedTrips.length > 0 ? (
+            {isLoading ? (
+              <tr>
+                <td colSpan="10" className="py-16 text-center text-slate-400 dark:text-slate-500 font-semibold">
+                  <div className="flex flex-col items-center gap-2">
+                    <RefreshCw className="h-8 w-8 text-blue-500 animate-spin" />
+                    <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">Loading trip roster...</p>
+                  </div>
+                </td>
+              </tr>
+            ) : paginatedTrips.length === 0 ? (
+              <tr>
+                <td colSpan="10" className="py-16 text-center text-slate-400 dark:text-slate-500 font-semibold">
+                  <div className="flex flex-col items-center gap-2">
+                    <AlertCircle className="h-8 w-8 text-slate-300 dark:text-slate-700" />
+                    <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">No trips found</p>
+                    <p className="text-xs text-slate-400 dark:text-slate-500">Try adjusting your search or filter criteria</p>
+                  </div>
+                </td>
+              </tr>
+            ) : (
               paginatedTrips.map((trip) => (
                 <tr key={trip.id} className="hover:bg-slate-55/40 dark:hover:bg-slate-900/20 transition-colors duration-150 group text-xs sm:text-sm">
                   {/* ID */}
@@ -490,13 +509,7 @@ export default function TripTable({
                   </td>
                 </tr>
               ))
-            {isLoading ? (
-              <tr>
-                <td colSpan="10" className="py-16 text-center text-slate-400 dark:text-slate-500 font-semibold">
-                  Loading trip roster...
-                </td>
-              </tr>
-            ) : paginatedTrips.length > 0 ? (
+            )}
           </tbody>
         </table>
       </div>

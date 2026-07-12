@@ -139,6 +139,10 @@ export default function TripList() {
     setView("details");
   };
 
+  const handleCreateTripClick = () => {
+    setView("add");
+  };
+
   const handleCancel = () => {
     setView("list");
     setSelectedTrip(null);

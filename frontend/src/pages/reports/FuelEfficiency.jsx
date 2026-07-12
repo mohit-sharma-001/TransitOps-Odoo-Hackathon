@@ -21,7 +21,7 @@ export default function FuelEfficiency() {
     setLoading(true);
     try {
       const data = await reportService.getAnalytics();
-      setAnalytics(data.analytics || data);
+      setAnalytics(data.vehicles || []);
       setFleetUtilization(data.fleetUtilization || 0);
     } catch (err) {
       console.error(err);
@@ -193,7 +193,7 @@ export default function FuelEfficiency() {
                           ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-400" 
                           : "bg-rose-50 text-rose-700 dark:bg-rose-950/20 dark:text-rose-400"
                       }`}>
-                        {(row.roi * 100).toFixed(1)}%
+                        {(row.roi ?? 0).toFixed(1)}%
                       </span>
                     </td>
                   </tr>
