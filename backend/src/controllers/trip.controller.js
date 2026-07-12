@@ -137,7 +137,126 @@ const dispatchTrip = async (req, res) => {
   }
 };
 
+const completeTrip = async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ error: errors.array()[0].msg });
+  }
+
+  const tripId = parseInt(req.params.id);
+  if (isNaN(tripId)) {
+    return res.status(400).json({ error: 'Invalid trip ID' });
+  }
+
+  const { finalOdometer, fuelConsumed } = req.body;
+
+  try {
+    const trip = await prisma.trip.findUnique({
+      where: { id: tripId },
+      include: { vehicle: true }
+    });
+
+    if (!trip) {
+      return res.status(404).json({ error: 'Trip not found' });
+    }
+
+    if (trip.status !== 'Dispatched') {
+      return res.status(400).json({ error: 'Trip must be in Dispatched status to complete it' });
+    }
+
+    const parsedOdo = parseFloat(finalOdometer);
+    if (parsedOdo < trip.vehicle.odometer) {
+      return res.status(400).json({ error: 'Final odometer reading must be greater than or equal to the current vehicle odometer' });
+    }
+
+    const result = await prisma.$transaction(async (tx) => {
+      // 1. Update Trip
+      const updatedTrip = await tx.trip.update({
+        where: { id: tripId },
+        data: {
+          status: 'Completed',
+          finalOdometer: parsedOdo,
+          fuelConsumed: parseFloat(fuelConsumed)
+        }
+      });
+
+      // 2. Release vehicle, update odometer
+      await tx.vehicle.update({
+        where: { id: trip.vehicleId },
+        data: {
+          status: 'Available',
+          odometer: parsedOdo
+        }
+      });
+
+      // 3. Release driver
+      await tx.driver.update({
+        where: { id: trip.driverId },
+        data: {
+          status: 'Available'
+        }
+      });
+
+      return updatedTrip;
+    });
+
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error('Complete trip error:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+const cancelTrip = async (req, res) => {
+  const tripId = parseInt(req.params.id);
+  if (isNaN(tripId)) {
+    return res.status(400).json({ error: 'Invalid trip ID' });
+  }
+
+  try {
+    const trip = await prisma.trip.findUnique({
+      where: { id: tripId }
+    });
+
+    if (!trip) {
+      return res.status(404).json({ error: 'Trip not found' });
+    }
+
+    if (trip.status !== 'Draft' && trip.status !== 'Dispatched') {
+      return res.status(400).json({ error: 'Trip cannot be cancelled from its current status' });
+    }
+
+    const result = await prisma.$transaction(async (tx) => {
+      // 1. Update Trip status
+      const updatedTrip = await tx.trip.update({
+        where: { id: tripId },
+        data: { status: 'Cancelled' }
+      });
+
+      // 2. Re-release vehicle & driver status to Available
+      await tx.vehicle.update({
+        where: { id: trip.vehicleId },
+        data: { status: 'Available' }
+      });
+
+      await tx.driver.update({
+        where: { id: trip.driverId },
+        data: { status: 'Available' }
+      });
+
+      return updatedTrip;
+    });
+
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error('Cancel trip error:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
 module.exports = {
   createTrip,
-  dispatchTrip
+  dispatchTrip,
+  completeTrip,
+  cancelTrip
 };

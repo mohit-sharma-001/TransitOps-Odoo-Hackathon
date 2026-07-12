@@ -29,4 +29,24 @@ router.post(
   tripController.dispatchTrip
 );
 
+// POST /api/trips/:id/complete (Fleet Manager & Dispatcher only)
+router.post(
+  '/:id/complete',
+  requireAuth,
+  requireRole(['FleetManager', 'Dispatcher']),
+  [
+    body('finalOdometer').isFloat({ min: 0 }).withMessage('Final odometer must be a non-negative number'),
+    body('fuelConsumed').isFloat({ min: 0 }).withMessage('Fuel consumed must be a non-negative number')
+  ],
+  tripController.completeTrip
+);
+
+// POST /api/trips/:id/cancel (Fleet Manager & Dispatcher only)
+router.post(
+  '/:id/cancel',
+  requireAuth,
+  requireRole(['FleetManager', 'Dispatcher']),
+  tripController.cancelTrip
+);
+
 module.exports = router;
