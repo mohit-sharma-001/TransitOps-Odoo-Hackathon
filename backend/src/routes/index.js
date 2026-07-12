@@ -5,11 +5,13 @@ const healthRoutes = require('./health.routes');
 const authRoutes = require('./auth.routes');
 const vehicleRoutes = require('./vehicle.routes');
 const driverRoutes = require('./driver.routes');
+const tripRoutes = require('./trip.routes');
 
 // Mount routes
 router.use('/health', healthRoutes);
 router.use('/auth', authRoutes);
 router.use('/vehicles', vehicleRoutes);
 router.use('/drivers', driverRoutes);
+router.use('/trips', tripRoutes);
 
 module.exports = router;
