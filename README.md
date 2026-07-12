@@ -2,6 +2,10 @@
 
 TransitOps is a modern digital platform built to manage, track, and automate transport company operations. It provides a complete workflow for tracking vehicles, drivers, trips, maintenance scheduling, fuel logs, and real-time operational expenses, complete with a performance and ROI analytics dashboard.
 
+### 🔗 Deployed Application
+* **Live Link:** [https://transit-ops-odoo-hackathon-lake.vercel.app/login](https://transit-ops-odoo-hackathon-lake.vercel.app/login)
+* **Backend API:** [https://transitops-odoo-hackathon-m4od.onrender.com](https://transitops-odoo-hackathon-m4od.onrender.com)
+
 ---
 
 ## 🚀 Key Features
@@ -97,12 +101,3 @@ The application will be accessible at [http://localhost:5173](http://localhost:5
 
 We recently addressed three critical bugs in the codebase to restore platform stability and ensure correct rendering:
 
-1.  **Vite Build & Syntax Error (`TripTable.jsx`):**
-    *   *Issue:* The JSX table body containing the trips roster suffered from an unclosed, malformed nested ternary block (`{paginatedTrips.length > 0 ? (...)`), leading to a build-blocking Vite compilation error.
-    *   *Fix:* Cleaned and restructured the table rendering into sequential checks (Loading indicator $\rightarrow$ Empty list placeholder $\rightarrow$ Data mapping).
-2.  **Trips Page Runtime Crash (`TripList.jsx`):**
-    *   *Issue:* The trips view failed to render, throwing a `ReferenceError: handleCreateTripClick is not defined` because the click handler prop was passed to the component without being defined in the parent scope.
-    *   *Fix:* Defined the handler to properly redirect the UI state to the creation form.
-3.  **Reports Page Crash & Data-Binding (`FuelEfficiency.jsx`):**
-    *   *Issue:* The page called `setAnalytics(data.analytics || data)` on the backend response. Since the backend returns `{ fleetUtilization, vehicles: [...] }`, `data.analytics` was undefined, binding a non-array object to the state and causing a crash on `.reduce()` or `.map()` calls.
-    *   *Fix:* Bound state correctly to `data.vehicles || []` and fixed the ROI display scaling (preventing ROI percentage from being multiplied by 100 twice).
