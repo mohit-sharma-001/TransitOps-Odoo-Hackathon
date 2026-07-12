@@ -1,0 +1,23 @@
+@import "tailwindcss";
+
+:root {
+  --primary: #2563eb;
+  --secondary: #3b82f6;
+  --success: #22c55e;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --background: #f8fafc;
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--background);
+  font-family: Inter, sans-serif;
+}
