@@ -54,8 +54,15 @@ const createDriver = async (req, res) => {
  */
 const listDrivers = async (req, res) => {
   try {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
     const drivers = await prisma.driver.findMany();
-    return res.status(200).json(drivers);
+    const mappedDrivers = drivers.map(d => ({
+      ...d,
+      licenseValid: new Date(d.licenseExpiry) >= today
+    }));
+    return res.status(200).json(mappedDrivers);
   } catch (error) {
     console.error('List drivers error:', error);
     return res.status(500).json({ error: 'Internal server error' });
@@ -78,7 +85,11 @@ const listAvailableDrivers = async (req, res) => {
         }
       }
     });
-    return res.status(200).json(drivers);
+    const mappedDrivers = drivers.map(d => ({
+      ...d,
+      licenseValid: true // Since gte today is queried, it will always be valid
+    }));
+    return res.status(200).json(mappedDrivers);
   } catch (error) {
     console.error('List available drivers error:', error);
     return res.status(500).json({ error: 'Internal server error' });
